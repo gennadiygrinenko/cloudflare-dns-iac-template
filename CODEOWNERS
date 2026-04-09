@@ -1,0 +1,7 @@
+# All changes require at least one review
+* @your-github-username
+
+# Infrastructure changes require explicit approval
+envs/cloudflare/zones/**   @your-github-username
+terraform/modules/**       @your-github-username
+.github/workflows/**       @your-github-username

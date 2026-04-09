@@ -1,0 +1,132 @@
+name: Validate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "envs/cloudflare/zones/**"
+      - "terraform/modules/**"
+      - ".github/workflows/**"
+      - ".github/scripts/**"
+
+# Cancel in-progress runs for the same PR branch
+concurrency:
+  group: validate-${{ github.head_ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write # for plan summary comment
+
+env:
+  TERRAFORM_VERSION: "1.9.8"
+  TERRAGRUNT_VERSION: "0.67.0"
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
+
+jobs:
+  # ── Detect which zones actually changed ──────────────────────────────────
+  detect-zones:
+    name: Detect changed zones
+    runs-on: ubuntu-24.04
+    outputs:
+      zones: ${{ steps.detect.outputs.zones }}
+      any_changes: ${{ steps.detect.outputs.any_changes }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed zones
+        id: detect
+        run: bash .github/scripts/detect-zones.sh "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}"
+
+  # ── Validate changed zones in parallel ───────────────────────────────────
+  validate:
+    name: Validate / ${{ matrix.zone }}
+    needs: detect-zones
+    if: needs.detect-zones.outputs.any_changes == 'true'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        zone: ${{ fromJson(needs.detect-zones.outputs.zones) }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform ${{ env.TERRAFORM_VERSION }}
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Install Terragrunt
+        run: bash .github/scripts/install-terragrunt.sh "${{ env.TERRAGRUNT_VERSION }}"
+
+      - name: Cache Terraform plugins
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: tf-plugins-${{ env.TERRAFORM_VERSION }}-${{ hashFiles('**/versions.tf', '**/versions.generated.tf') }}
+          restore-keys: tf-plugins-${{ env.TERRAFORM_VERSION }}-
+
+      - name: terraform fmt check
+        run: terraform fmt -check -recursive terraform/
+
+      - name: tflint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: latest
+
+      - name: Run tflint
+        run: |
+          tflint --init
+          tflint --recursive --format compact
+
+      - name: terragrunt validate — ${{ matrix.zone }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          TF_CLOUD_ORGANIZATION: ${{ vars.TF_CLOUD_ORGANIZATION }}
+        run: |
+          mkdir -p "$TF_PLUGIN_CACHE_DIR"
+          ZONE_DIR="envs/cloudflare/zones/${{ matrix.zone }}"
+
+          if ! grep -qE '^\s*"[^"]+"\s*=' "${ZONE_DIR}/variables.auto.tfvars" 2>/dev/null; then
+            echo "No domains configured in ${{ matrix.zone }} — skipping."
+            exit 0
+          fi
+
+          cd "$ZONE_DIR"
+          terragrunt validate --terragrunt-non-interactive 2>&1 | tee /tmp/validate.log
+          EXIT_CODE=${PIPESTATUS[0]}
+
+          # Post result as PR step summary
+          echo "### Validation: ${{ matrix.zone }}" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$EXIT_CODE" -eq 0 ]; then
+            echo "✅ Passed" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ Failed" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            cat /tmp/validate.log >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          exit "$EXIT_CODE"
+
+  # ── Summary gate — single status check for branch protection ─────────────
+  validate-complete:
+    name: Validate complete
+    needs: validate
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check results
+        run: |
+          if [ "${{ needs.validate.result }}" = "failure" ]; then
+            echo "One or more zones failed validation."
+            exit 1
+          fi
+          echo "All zones validated successfully."

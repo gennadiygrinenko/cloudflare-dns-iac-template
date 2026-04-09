@@ -1,0 +1,42 @@
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+*.tfplan
+tfplan
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Terragrunt generated files
+*.generated.tf
+.terragrunt-cache/
+
+# Terraform Cloud credentials (never commit)
+.terraform.d/credentials.tfrc.json
+
+# Terraform plugin cache (local dev, not committed)
+.terraform-plugin-cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# CI artifacts
+.zone-changes/
+
+# Python (for helper scripts)
+__pycache__/
+*.pyc
+.venv/

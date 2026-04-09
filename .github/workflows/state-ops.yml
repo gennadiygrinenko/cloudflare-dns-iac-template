@@ -1,0 +1,103 @@
+name: State Operations
+
+# Manual workflow for Terraform state management.
+# Use this to import a new domain, remove a domain from state,
+# or move a domain between zones without running a full deploy.
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "Operation to perform"
+        required: true
+        type: choice
+        options:
+          - import-domain
+          - remove-domain
+          - move-domain
+      zone:
+        description: "Target zone name (e.g. acme)"
+        required: true
+        type: string
+      domain:
+        description: "Domain name (e.g. acme-corp.io)"
+        required: true
+        type: string
+      from_zone:
+        description: "Source zone — required only for move-domain"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+# Prevent concurrent state operations on the same zone
+concurrency:
+  group: terraform-state-${{ inputs.zone }}
+  cancel-in-progress: false
+
+env:
+  TERRAFORM_VERSION: "1.9.8"
+  TERRAGRUNT_VERSION: "0.67.0"
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
+
+jobs:
+  state-op:
+    name: "${{ inputs.operation }} — ${{ inputs.domain }} (${{ inputs.zone }})"
+    runs-on: ubuntu-24.04
+    environment: production # requires approval before touching state
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform ${{ env.TERRAFORM_VERSION }}
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Install Terragrunt
+        run: bash .github/scripts/install-terragrunt.sh "${{ env.TERRAGRUNT_VERSION }}"
+
+      - name: Cache Terraform plugins
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: tf-plugins-${{ env.TERRAFORM_VERSION }}-${{ hashFiles('**/versions.tf') }}
+          restore-keys: tf-plugins-${{ env.TERRAFORM_VERSION }}-
+
+      - name: Validate inputs
+        run: |
+          if [ "${{ inputs.operation }}" = "move-domain" ] && [ -z "${{ inputs.from_zone }}" ]; then
+            echo "::error::from_zone is required for move-domain operation."
+            exit 1
+          fi
+
+          ZONE_DIR="envs/cloudflare/zones/${{ inputs.zone }}"
+          if [ ! -d "$ZONE_DIR" ]; then
+            echo "::error::Zone directory not found: $ZONE_DIR"
+            exit 1
+          fi
+
+      - name: Run ${{ inputs.operation }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          TF_CLOUD_ORGANIZATION: ${{ vars.TF_CLOUD_ORGANIZATION }}
+        run: |
+          bash .github/scripts/state-ops.sh \
+            "${{ inputs.operation }}" \
+            "${{ inputs.zone }}" \
+            "${{ inputs.domain }}" \
+            "${{ inputs.from_zone }}"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## State Operation Result" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Operation**: ${{ inputs.operation }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Domain**: ${{ inputs.domain }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Zone**: ${{ inputs.zone }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Status**: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
