@@ -2,6 +2,47 @@
 # Google Workspace standard records injected when google_workspace = true
 # -------------------------------------------------------------------
 locals {
+  # ------------------------------------------------------------------
+  # Plan-based defaults: merged with user-provided settings.
+  # User values always win; plan defaults fill in the rest.
+  # ------------------------------------------------------------------
+  plan_defaults = {
+    free = {
+      polish        = "off"
+      mirage        = false
+      rocket_loader = false
+      waf_managed   = false
+    }
+    pro = {
+      polish        = "lossless"
+      mirage        = true
+      rocket_loader = false # can break some JS — opt-in explicitly
+      waf_managed   = true
+    }
+    business = {
+      polish        = "lossless"
+      mirage        = true
+      rocket_loader = false
+      waf_managed   = true
+    }
+    enterprise = {
+      polish        = "lossless"
+      mirage        = true
+      rocket_loader = false
+      waf_managed   = true
+    }
+  }
+
+  # Resolved settings per domain: plan defaults ← overridden by user settings
+  resolved = {
+    for domain, cfg in var.domains : domain => {
+      polish        = coalesce(cfg.settings.polish, local.plan_defaults[cfg.plan].polish)
+      mirage        = coalesce(cfg.settings.mirage, local.plan_defaults[cfg.plan].mirage)
+      rocket_loader = coalesce(cfg.settings.rocket_loader, local.plan_defaults[cfg.plan].rocket_loader)
+      waf_managed   = coalesce(cfg.waf_managed_enabled, local.plan_defaults[cfg.plan].waf_managed)
+    }
+  }
+
   gws_mx_records = [
     { name = "@", value = "aspmx.l.google.com", priority = 1 },
     { name = "@", value = "alt1.aspmx.l.google.com", priority = 5 },
@@ -94,6 +135,7 @@ resource "cloudflare_zone" "this" {
   account = { id = var.account_id }
   name    = each.key
   type    = "full"
+  plan    = each.value.plan
 }
 
 # -------------------------------------------------------------------
@@ -147,6 +189,74 @@ resource "cloudflare_zone_setting" "brotli" {
   value      = coalesce(each.value.settings.brotli, true) ? "on" : "off"
 }
 
+resource "cloudflare_zone_setting" "early_hints" {
+  for_each = var.domains
+
+  zone_id    = cloudflare_zone.this[each.key].id
+  setting_id = "early_hints"
+  value      = coalesce(each.value.settings.early_hints, true) ? "on" : "off"
+}
+
+resource "cloudflare_zone_setting" "always_online" {
+  for_each = var.domains
+
+  zone_id    = cloudflare_zone.this[each.key].id
+  setting_id = "always_online"
+  value      = coalesce(each.value.settings.always_online, false) ? "on" : "off"
+}
+
+resource "cloudflare_zone_setting" "cache_level" {
+  for_each = var.domains
+
+  zone_id    = cloudflare_zone.this[each.key].id
+  setting_id = "cache_level"
+  value      = coalesce(each.value.settings.cache_level, "aggressive")
+}
+
+resource "cloudflare_zone_setting" "security_level" {
+  for_each = var.domains
+
+  zone_id    = cloudflare_zone.this[each.key].id
+  setting_id = "security_level"
+  value      = coalesce(each.value.settings.security_level, "medium")
+}
+
+resource "cloudflare_zone_setting" "max_upload" {
+  for_each = var.domains
+
+  zone_id    = cloudflare_zone.this[each.key].id
+  setting_id = "max_upload"
+  value      = coalesce(each.value.settings.max_upload, 100)
+}
+
+# -------------------------------------------------------------------
+# Pro+ zone settings (polish, mirage, rocket_loader)
+# Only created for zones with plan = pro | business | enterprise
+# -------------------------------------------------------------------
+resource "cloudflare_zone_setting" "polish" {
+  for_each = { for domain, cfg in var.domains : domain => cfg if contains(["pro", "business", "enterprise"], cfg.plan) }
+
+  zone_id    = cloudflare_zone.this[each.key].id
+  setting_id = "polish"
+  value      = local.resolved[each.key].polish
+}
+
+resource "cloudflare_zone_setting" "mirage" {
+  for_each = { for domain, cfg in var.domains : domain => cfg if contains(["pro", "business", "enterprise"], cfg.plan) }
+
+  zone_id    = cloudflare_zone.this[each.key].id
+  setting_id = "mirage"
+  value      = local.resolved[each.key].mirage ? "on" : "off"
+}
+
+resource "cloudflare_zone_setting" "rocket_loader" {
+  for_each = { for domain, cfg in var.domains : domain => cfg if contains(["pro", "business", "enterprise"], cfg.plan) }
+
+  zone_id    = cloudflare_zone.this[each.key].id
+  setting_id = "rocket_loader"
+  value      = local.resolved[each.key].rocket_loader ? "on" : "off"
+}
+
 # -------------------------------------------------------------------
 # DNS Records
 # -------------------------------------------------------------------
@@ -194,6 +304,60 @@ resource "cloudflare_ruleset" "redirect" {
         }
         preserve_query_string = true
       }
+    }
+  }
+}
+
+# -------------------------------------------------------------------
+# WAF: Cloudflare Managed Ruleset (Pro+ only)
+# Activates the Cloudflare-managed WAF on the zone.
+# -------------------------------------------------------------------
+resource "cloudflare_ruleset" "waf_managed" {
+  for_each = {
+    for domain, cfg in var.domains : domain => cfg
+    if local.resolved[domain].waf_managed && contains(["pro", "business", "enterprise"], cfg.plan)
+  }
+
+  zone_id     = cloudflare_zone.this[each.key].id
+  name        = "default"
+  description = "Managed by Terraform. Cloudflare Managed WAF ruleset."
+  kind        = "zone"
+  phase       = "http_request_firewall_managed"
+
+  rules {
+    action      = "execute"
+    description = "Cloudflare Managed Ruleset"
+    enabled     = true
+    expression  = "true"
+
+    action_parameters {
+      id = "efb7b8c949ac4650a09736fc376e9aee" # Cloudflare Managed Ruleset ID (global constant)
+    }
+  }
+}
+
+# -------------------------------------------------------------------
+# WAF: Custom firewall rules (Pro+ only)
+# -------------------------------------------------------------------
+resource "cloudflare_ruleset" "firewall_custom" {
+  for_each = {
+    for domain, cfg in var.domains : domain => cfg
+    if length(cfg.firewall_rules) > 0 && contains(["pro", "business", "enterprise"], cfg.plan)
+  }
+
+  zone_id     = cloudflare_zone.this[each.key].id
+  name        = "default"
+  description = "Managed by Terraform. Custom firewall rules."
+  kind        = "zone"
+  phase       = "http_request_firewall_custom"
+
+  dynamic "rules" {
+    for_each = each.value.firewall_rules
+    content {
+      action      = rules.value.action
+      description = rules.value.description
+      enabled     = rules.value.enabled
+      expression  = rules.value.expression
     }
   }
 }

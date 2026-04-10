@@ -26,13 +26,23 @@ variable "domains" {
 
     # Zone-level settings to override defaults
     settings = optional(object({
-      ssl                       = optional(string, "strict")
-      min_tls_version           = optional(string, "1.2")
-      always_use_https          = optional(bool, true)
-      automatic_https_rewrites  = optional(bool, true)
-      ipv6                      = optional(bool, true)
-      brotli                    = optional(bool, true)
-      early_hints               = optional(bool, true)
+      # Available on all plans
+      ssl                      = optional(string, "strict")
+      min_tls_version          = optional(string, "1.2")
+      always_use_https         = optional(bool, true)
+      automatic_https_rewrites = optional(bool, true)
+      always_online            = optional(bool, false)
+      ipv6                     = optional(bool, true)
+      brotli                   = optional(bool, true)
+      early_hints              = optional(bool, true)
+      cache_level              = optional(string, "aggressive") # aggressive | basic | simplified
+      security_level           = optional(string, "medium")     # off | essentially_off | low | medium | high | under_attack
+      max_upload               = optional(number, 100)          # MB; 100 on free, up to 500 on Pro+
+
+      # Pro+ only (ignored on free plan)
+      polish        = optional(string, "off") # off | lossless | lossy
+      mirage        = optional(bool, false)   # mobile image optimization
+      rocket_loader = optional(bool, false)   # async JS loading
     }), {})
 
     # Convenience: auto-add Google Workspace MX + SPF + DMARC
@@ -43,6 +53,20 @@ variable "domains" {
 
     # 301 redirect entire zone to another domain
     redirect_to = optional(string, null)
+
+    # WAF: Cloudflare Managed Ruleset (Pro+ only)
+    # When enabled, activates the Cloudflare Managed Ruleset on the zone.
+    waf_managed_enabled = optional(bool, false)
+
+    # WAF: custom firewall rules (Pro+ only)
+    # Each rule: { expression, description, action, enabled }
+    # action: block | challenge | js_challenge | managed_challenge | log | skip
+    firewall_rules = optional(list(object({
+      expression  = string
+      description = optional(string, "")
+      action      = optional(string, "block")
+      enabled     = optional(bool, true)
+    })), [])
   }))
 
   validation {
