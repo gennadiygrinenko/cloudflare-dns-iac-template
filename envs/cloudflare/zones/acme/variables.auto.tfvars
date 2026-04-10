@@ -39,4 +39,38 @@ domains = {
       { type = "A", name = "www", value = "192.0.2.1", proxied = true },
     ]
   }
+
+  # Pro plan example:
+  # - polish=lossless, mirage, WAF managed ruleset enabled automatically
+  # - custom firewall rule added on top
+  # - individual settings can be overridden via the settings block
+  "acme-shop.com" = {
+    plan             = "pro"
+    google_workspace = true
+
+    # Optional: override specific Pro defaults
+    # settings = {
+    #   polish         = "lossy"   # more aggressive image compression
+    #   rocket_loader  = true      # enable async JS loading
+    #   security_level = "high"
+    # }
+
+    # Optional: disable WAF if not needed
+    # waf_managed_enabled = false
+
+    # Optional: add custom firewall rules
+    firewall_rules = [
+      {
+        expression  = "(ip.geoip.country eq \"CN\" or ip.geoip.country eq \"RU\")"
+        description = "Challenge high-risk countries"
+        action      = "managed_challenge"
+      },
+    ]
+
+    records = [
+      { type = "A", name = "@", value = "76.76.21.21", proxied = true },
+      { type = "A", name = "www", value = "76.76.21.21", proxied = true },
+      { type = "A", name = "api", value = "76.76.21.21", proxied = true },
+    ]
+  }
 }
