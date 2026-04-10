@@ -135,7 +135,8 @@ resource "cloudflare_zone" "this" {
   account = { id = var.account_id }
   name    = each.key
   type    = "full"
-  plan    = each.value.plan
+  # plan is read-only in provider v5 — set it in the Cloudflare dashboard.
+  # The plan variable is still used here to enable/disable Pro+ resources.
 }
 
 # -------------------------------------------------------------------
@@ -285,27 +286,26 @@ resource "cloudflare_ruleset" "redirect" {
   for_each = { for domain, cfg in var.domains : domain => cfg if cfg.redirect_to != null }
 
   zone_id     = cloudflare_zone.this[each.key].id
-  name        = "Redirect ${each.key} → ${each.value.redirect_to}"
+  name        = "Redirect ${each.key} to ${each.value.redirect_to}"
   description = "Managed by Terraform. Redirects all traffic to ${each.value.redirect_to}."
   kind        = "zone"
   phase       = "http_request_dynamic_redirect"
 
-  rules {
-    action      = "redirect"
-    description = "301 redirect to ${each.value.redirect_to}"
-    enabled     = true
-    expression  = "true"
-
-    action_parameters {
-      from_value {
-        status_code = 301
-        target_url {
-          value = each.value.redirect_to
+  rules = [
+    {
+      action      = "redirect"
+      description = "301 redirect to ${each.value.redirect_to}"
+      enabled     = true
+      expression  = "true"
+      action_parameters = {
+        from_value = {
+          status_code           = 301
+          preserve_query_string = true
+          target_url            = { value = each.value.redirect_to }
         }
-        preserve_query_string = true
       }
     }
-  }
+  ]
 }
 
 # -------------------------------------------------------------------
@@ -324,16 +324,17 @@ resource "cloudflare_ruleset" "waf_managed" {
   kind        = "zone"
   phase       = "http_request_firewall_managed"
 
-  rules {
-    action      = "execute"
-    description = "Cloudflare Managed Ruleset"
-    enabled     = true
-    expression  = "true"
-
-    action_parameters {
-      id = "efb7b8c949ac4650a09736fc376e9aee" # Cloudflare Managed Ruleset ID (global constant)
+  rules = [
+    {
+      action      = "execute"
+      description = "Cloudflare Managed Ruleset"
+      enabled     = true
+      expression  = "true"
+      action_parameters = {
+        id = "efb7b8c949ac4650a09736fc376e9aee" # Cloudflare Managed Ruleset ID (global constant)
+      }
     }
-  }
+  ]
 }
 
 # -------------------------------------------------------------------
@@ -351,13 +352,12 @@ resource "cloudflare_ruleset" "firewall_custom" {
   kind        = "zone"
   phase       = "http_request_firewall_custom"
 
-  dynamic "rules" {
-    for_each = each.value.firewall_rules
-    content {
-      action      = rules.value.action
-      description = rules.value.description
-      enabled     = rules.value.enabled
-      expression  = rules.value.expression
+  rules = [
+    for r in each.value.firewall_rules : {
+      action      = r.action
+      description = r.description
+      enabled     = r.enabled
+      expression  = r.expression
     }
-  }
+  ]
 }
