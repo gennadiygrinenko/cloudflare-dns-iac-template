@@ -8,11 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: |
-          Operation to perform:
-            • import-domain  — inputs: zone, domain
-            • remove-domain  — inputs: zone, domain
-            • move-domain    — inputs: zone, domain, from_zone (required)
+        description: "import-domain | remove-domain | move-domain (requires from_zone)"
         required: true
         type: choice
         options:
@@ -20,21 +16,15 @@ on:
           - remove-domain
           - move-domain
       zone:
-        description: |
-          Target zone name — folder under envs/cloudflare/zones/
-          Example: acme
+        description: "Target zone name, e.g. acme (folder under envs/cloudflare/zones/)"
         required: true
         type: string
       domain:
-        description: |
-          Domain to operate on
-          Example: acme-corp.io
+        description: "Domain to operate on, e.g. acme-corp.io"
         required: true
         type: string
       from_zone:
-        description: |
-          [move-domain only] Source zone name to move the domain from
-          Example: legacy
+        description: "[move-domain only] Source zone name, e.g. legacy"
         required: false
         type: string
 
