@@ -10,6 +10,8 @@
 - **Terraform Cloud backend** — remote state, no static cloud credentials needed
 - **Google Workspace auto-records** — set `google_workspace = true` to auto-generate MX, SPF, DMARC, CNAME records
 - **Domain redirect** — set `redirect_to` for a 301 redirect ruleset
+- **Plan-based defaults** — set `plan = "pro"` to automatically enable polish, mirage, and WAF managed ruleset; override anything via `settings`
+- **WAF & firewall rules** — Pro+ domains get Cloudflare Managed WAF and support custom `firewall_rules`
 - **Cloudflare provider v5** — uses the latest provider with `cloudflare_dns_record` and `cloudflare_zone_setting`
 
 ## Stack
@@ -98,22 +100,19 @@ Push to a feature branch. The `validate` workflow will run automatically. On mer
 
 ## Domain configuration reference
 
+### Free plan (minimal)
+
 ```hcl
 domains = {
   "example.com" = {
-    plan             = "free"              # free | pro | business | enterprise
-    google_workspace = true                # auto-adds MX, SPF, DMARC, CNAME
+    plan             = "free"   # free | pro | business | enterprise
+    google_workspace = true     # auto-adds MX, SPF, DMARC, CNAME records
 
     records = [
       { type = "A",     name = "@",   value = "1.2.3.4",          proxied = true  },
       { type = "CNAME", name = "www", value = "example.com",       proxied = true  },
       { type = "TXT",   name = "@",   value = "some-verification", proxied = false },
     ]
-
-    settings = {
-      ssl             = "strict"   # off | flexible | full | strict
-      min_tls_version = "1.2"
-    }
   }
 
   "old-brand.com" = {
@@ -124,6 +123,75 @@ domains = {
       { type = "A", name = "www", value = "1.2.3.4", proxied = true },
     ]
   }
+}
+```
+
+### Pro plan (automatic defaults)
+
+Setting `plan = "pro"` automatically enables:
+- `polish = "lossless"` — image compression
+- `mirage = true` — mobile image optimization
+- `waf_managed = true` — Cloudflare Managed WAF ruleset
+
+```hcl
+domains = {
+  "shop.com" = {
+    plan             = "pro"
+    google_workspace = true
+
+    # All Pro defaults apply automatically — no extra config needed.
+    # Override specific settings if required:
+    # settings = {
+    #   polish         = "lossy"    # off | lossless | lossy
+    #   mirage         = false
+    #   rocket_loader  = true       # async JS loading (off by default — can break JS)
+    #   security_level = "high"     # off | essentially_off | low | medium | high | under_attack
+    #   cache_level    = "aggressive" # aggressive | basic | simplified
+    #   max_upload     = 200        # MB; up to 500 on Pro+
+    # }
+
+    # Disable WAF if not needed:
+    # waf_managed_enabled = false
+
+    # Custom firewall rules (Pro+ only):
+    firewall_rules = [
+      {
+        expression  = "(ip.geoip.country eq \"CN\" or ip.geoip.country eq \"RU\")"
+        description = "Challenge high-risk countries"
+        action      = "managed_challenge"  # block | challenge | js_challenge | managed_challenge | log | skip
+      },
+    ]
+
+    records = [
+      { type = "A", name = "@",   value = "1.2.3.4", proxied = true },
+      { type = "A", name = "www", value = "1.2.3.4", proxied = true },
+      { type = "A", name = "api", value = "1.2.3.4", proxied = true },
+    ]
+  }
+}
+```
+
+### All available settings
+
+```hcl
+settings = {
+  # Available on all plans
+  ssl                      = "strict"      # off | flexible | full | strict
+  min_tls_version          = "1.2"         # 1.0 | 1.1 | 1.2 | 1.3
+  always_use_https         = true
+  automatic_https_rewrites = true
+  always_online            = false         # serve cached page when origin is down
+  ipv6                     = true
+  brotli                   = true
+  early_hints              = true
+  cache_level              = "aggressive"  # aggressive | basic | simplified
+  security_level           = "medium"      # off | essentially_off | low | medium | high | under_attack
+  max_upload               = 100           # MB; 100 on free, up to 500 on Pro+
+
+  # Pro+ only (ignored on free plan)
+  polish        = "lossless"  # off | lossless | lossy
+  mirage        = true        # mobile image optimization
+  rocket_loader = false       # async JS loading (opt-in — can break some JS)
 }
 ```
 
