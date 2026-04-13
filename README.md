@@ -1,5 +1,10 @@
 # cloudflare-dns-iac-template
 
+[![Validate](https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/actions/workflows/validate.yml/badge.svg)](https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/actions/workflows/validate.yml)
+[![Deploy](https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/actions/workflows/deploy.yml/badge.svg)](https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/actions/workflows/deploy.yml)
+[![Terraform](https://img.shields.io/badge/terraform-%3E%3D1.9-blueviolet?logo=terraform)](https://www.terraform.io/)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 > Production-ready IaC template for managing Cloudflare DNS across multiple zones using Terraform + Terragrunt + GitHub Actions.
 
 ## Features
@@ -244,12 +249,23 @@ export CLOUDFLARE_ACCOUNT_ID=your-account-id
 export TF_CLOUD_ORGANIZATION=your-org
 
 # Install pre-commit hooks
-pre-commit install
+make hooks
+
+# Format all files
+make fmt
 
 # Work on a zone
-cd envs/cloudflare/zones/acme
-terragrunt init
-terragrunt plan
+make init  zone=acme
+make plan  zone=acme
+make apply zone=acme
+
+# State operations
+make import zone=acme domain=acme-corp.io
+make remove zone=acme domain=acme-corp.io
+make move   zone=acme domain=acme-corp.io from_zone=legacy
+
+# Show all available commands
+make help
 ```
 
 ## License
