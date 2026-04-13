@@ -8,7 +8,8 @@
 - **DRY config** — Terragrunt code generation; zone dirs contain only `variables.auto.tfvars`
 - **GitHub Actions CI/CD** — validate on PR, plan + apply on merge to `main` with required approvals
 - **Terraform Cloud backend** — remote state, no static cloud credentials needed
-- **Google Workspace auto-records** — set `google_workspace = true` to auto-generate MX, SPF, DMARC, CNAME records
+- **Google Workspace auto-records** — set `google_workspace = true` to auto-generate MX, SPF, DMARC, DKIM, CNAME records
+- **Apex shortcut** — set `apex_ip` to auto-create proxied `@` and `www` A records in one line
 - **Domain redirect** — set `redirect_to` for a 301 redirect ruleset
 - **Plan-based defaults** — set `plan = "pro"` to automatically enable polish, mirage, and WAF managed ruleset; override anything via `settings`
 - **WAF & firewall rules** — Pro+ domains get Cloudflare Managed WAF and support custom `firewall_rules`
@@ -30,6 +31,7 @@
 .
 ├── .github/
 │   ├── scripts/
+│   │   ├── common.sh             # Shared logging utilities (log_info, log_success, etc.)
 │   │   ├── detect-zones.sh       # Detect changed/all zones for CI matrix
 │   │   ├── install-terragrunt.sh # Install Terragrunt in CI
 │   │   └── state-ops.sh          # Import / remove / move domain state ops
@@ -105,23 +107,27 @@ Push to a feature branch. The `validate` workflow will run automatically. On mer
 ```hcl
 domains = {
   "example.com" = {
-    plan             = "free"   # free | pro | business | enterprise
-    google_workspace = true     # auto-adds MX, SPF, DMARC, CNAME records
+    plan    = "free"   # free | pro | business | enterprise
+    apex_ip = "1.2.3.4"  # auto-creates proxied A records for @ and www
+
+    # Google Workspace: auto-adds MX (smtp.google.com), SPF, DMARC, mail/calendar CNAMEs
+    google_workspace         = true
+    google_site_verification = "abc123xyz"          # Google Search Console token
+    google_dkim_key          = "MIIBIjANBgkq..."    # from GWS Admin > Gmail > Authenticate email
+    spf_includes             = ["sendgrid.net"]      # extra SPF includes
+    dmarc_policy             = "reject"              # none | quarantine | reject
 
     records = [
-      { type = "A",     name = "@",   value = "1.2.3.4",          proxied = true  },
-      { type = "CNAME", name = "www", value = "example.com",       proxied = true  },
-      { type = "TXT",   name = "@",   value = "some-verification", proxied = false },
+      # Only records that aren't covered by shortcuts above
+      { type = "A",     name = "staging", value = "1.2.3.4", proxied = false, ttl = 300 },
+      { type = "TXT",   name = "@",       value = "some-other-verification" },
     ]
   }
 
   "old-brand.com" = {
     plan        = "free"
-    redirect_to = "https://example.com"  # 301 redirect entire domain
-    records = [
-      { type = "A", name = "@",   value = "1.2.3.4", proxied = true },
-      { type = "A", name = "www", value = "1.2.3.4", proxied = true },
-    ]
+    apex_ip     = "1.2.3.4"             # auto-creates @ and www
+    redirect_to = "https://example.com" # 301 redirect entire domain
   }
 }
 ```
@@ -137,7 +143,9 @@ Setting `plan = "pro"` automatically enables:
 domains = {
   "shop.com" = {
     plan             = "pro"
+    apex_ip          = "1.2.3.4"    # auto-creates @ and www
     google_workspace = true
+    dmarc_policy     = "quarantine"
 
     # All Pro defaults apply automatically — no extra config needed.
     # Override specific settings if required:
@@ -163,13 +171,32 @@ domains = {
     ]
 
     records = [
-      { type = "A", name = "@",   value = "1.2.3.4", proxied = true },
-      { type = "A", name = "www", value = "1.2.3.4", proxied = true },
       { type = "A", name = "api", value = "1.2.3.4", proxied = true },
     ]
   }
 }
 ```
+
+### Google Workspace auto-records
+
+When `google_workspace = true`, the following DNS records are created automatically:
+
+| Type | Name | Value |
+|------|------|-------|
+| MX | `@` | `smtp.google.com` (priority 1) |
+| CNAME | `mail` | `ghs.googlehosted.com` |
+| CNAME | `calendar` | `ghs.googlehosted.com` |
+| TXT | `@` | `v=spf1 include:_spf.google.com [spf_includes] ~all` |
+| TXT | `_dmarc` | `v=DMARC1; p=<dmarc_policy>; rua=mailto:dmarc@<domain>` |
+
+Optional parameters:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `spf_includes` | `list(string)` | Extra SPF includes, e.g. `["sendgrid.net", "mailchimp.com"]` |
+| `dmarc_policy` | `string` | `none` (default) → `quarantine` → `reject` |
+| `google_site_verification` | `string` | Token from Google Search Console (the part after `google-site-verification=`) |
+| `google_dkim_key` | `string` | DKIM public key from GWS Admin → Apps → Gmail → Authenticate email |
 
 ### All available settings
 
