@@ -65,15 +65,19 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           TF_CLOUD_ORGANIZATION: ${{ vars.TF_CLOUD_ORGANIZATION }}
         run: |
+          source .github/scripts/common.sh
           mkdir -p "$TF_PLUGIN_CACHE_DIR"
+          log_section "Plan: ${{ matrix.zone }}"
           cd "envs/cloudflare/zones/${{ matrix.zone }}"
           terragrunt plan -out=tfplan --terragrunt-non-interactive 2>&1 | tee /tmp/plan.log
 
           echo "### Plan: ${{ matrix.zone }}" >> "$GITHUB_STEP_SUMMARY"
           if grep -q "No changes." /tmp/plan.log; then
+            log_info "No changes detected."
             echo "no_changes=true" >> "$GITHUB_OUTPUT"
             echo "⬛ No changes." >> "$GITHUB_STEP_SUMMARY"
           else
+            log_success "Changes detected — plan saved."
             echo "no_changes=false" >> "$GITHUB_OUTPUT"
             echo '```hcl' >> "$GITHUB_STEP_SUMMARY"
             grep -A 999 "Terraform will perform" /tmp/plan.log | head -60 >> "$GITHUB_STEP_SUMMARY" || true
@@ -138,13 +142,16 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           TF_CLOUD_ORGANIZATION: ${{ vars.TF_CLOUD_ORGANIZATION }}
         run: |
+          source .github/scripts/common.sh
+          log_section "Apply: ${{ matrix.zone }}"
           ZONE_DIR="envs/cloudflare/zones/${{ matrix.zone }}"
           if [ ! -f "${ZONE_DIR}/tfplan" ]; then
-            echo "No plan artifact for ${{ matrix.zone }} — no changes, skipping."
+            log_info "No plan artifact for ${{ matrix.zone }} — no changes, skipping."
             exit 0
           fi
 
           cd "$ZONE_DIR"
           terragrunt apply tfplan --terragrunt-non-interactive
+          log_success "Applied: ${{ matrix.zone }}"
 
           echo "### Applied: ${{ matrix.zone }} ✅" >> "$GITHUB_STEP_SUMMARY"

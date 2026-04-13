@@ -70,16 +70,21 @@ jobs:
 
       - name: Validate inputs
         run: |
+          source .github/scripts/common.sh
+          log_section "Validate inputs"
           if [ "${{ inputs.operation }}" = "move-domain" ] && [ -z "${{ inputs.from_zone }}" ]; then
+            log_error "from_zone is required for move-domain operation."
             echo "::error::from_zone is required for move-domain operation."
             exit 1
           fi
 
           ZONE_DIR="envs/cloudflare/zones/${{ inputs.zone }}"
           if [ ! -d "$ZONE_DIR" ]; then
+            log_error "Zone directory not found: $ZONE_DIR"
             echo "::error::Zone directory not found: $ZONE_DIR"
             exit 1
           fi
+          log_success "Inputs validated."
 
       - name: Run ${{ inputs.operation }}
         env:

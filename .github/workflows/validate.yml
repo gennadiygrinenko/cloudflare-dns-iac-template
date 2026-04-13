@@ -91,11 +91,13 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           TF_CLOUD_ORGANIZATION: ${{ vars.TF_CLOUD_ORGANIZATION }}
         run: |
+          source .github/scripts/common.sh
+          log_section "Validate: ${{ matrix.zone }}"
           mkdir -p "$TF_PLUGIN_CACHE_DIR"
           ZONE_DIR="envs/cloudflare/zones/${{ matrix.zone }}"
 
           if ! grep -qE '^\s*"[^"]+"\s*=' "${ZONE_DIR}/variables.auto.tfvars" 2>/dev/null; then
-            echo "No domains configured in ${{ matrix.zone }} — skipping."
+            log_info "No domains configured in ${{ matrix.zone }} — skipping."
             exit 0
           fi
 
@@ -103,11 +105,12 @@ jobs:
           terragrunt validate --terragrunt-non-interactive 2>&1 | tee /tmp/validate.log
           EXIT_CODE=${PIPESTATUS[0]}
 
-          # Post result as PR step summary
           echo "### Validation: ${{ matrix.zone }}" >> "$GITHUB_STEP_SUMMARY"
           if [ "$EXIT_CODE" -eq 0 ]; then
+            log_success "Validation passed: ${{ matrix.zone }}"
             echo "✅ Passed" >> "$GITHUB_STEP_SUMMARY"
           else
+            log_error "Validation failed: ${{ matrix.zone }}"
             echo "❌ Failed" >> "$GITHUB_STEP_SUMMARY"
             echo '```' >> "$GITHUB_STEP_SUMMARY"
             cat /tmp/validate.log >> "$GITHUB_STEP_SUMMARY"
@@ -125,8 +128,9 @@ jobs:
     steps:
       - name: Check results
         run: |
+          source .github/scripts/common.sh
           if [ "${{ needs.validate.result }}" = "failure" ]; then
-            echo "One or more zones failed validation."
+            log_error "One or more zones failed validation."
             exit 1
           fi
-          echo "All zones validated successfully."
+          log_success "All zones validated successfully."

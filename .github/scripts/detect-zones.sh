@@ -9,6 +9,10 @@
 #   any_changes - "true" | "false" (PR mode only)
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=common.sh
+source "${SCRIPT_DIR}/common.sh"
+
 BASE_SHA="${1:-}"
 HEAD_SHA="${2:-}"
 ZONES_DIR="envs/cloudflare/zones"
@@ -25,7 +29,7 @@ list_all_zones_with_domains() {
 if [ -n "$BASE_SHA" ] && [ -n "$HEAD_SHA" ]; then
   # PR mode: check if modules changed → validate all; otherwise only changed zones
   if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -q '^terraform/modules/'; then
-    echo "Terraform modules changed — validating all zones." >&2
+    log_info "Terraform modules changed — validating all zones."
     ZONES=$(list_all_zones_with_domains | jq -Rn '[inputs]')
   else
     ZONES=$(
@@ -47,5 +51,5 @@ else
   ZONES=$(list_all_zones_with_domains | jq -Rn '[inputs]')
 fi
 
-echo "Zones detected: $ZONES" >&2
+log_info "Zones detected: $ZONES"
 echo "zones=$ZONES" >> "$GITHUB_OUTPUT"
