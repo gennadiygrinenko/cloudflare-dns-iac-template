@@ -45,6 +45,9 @@ variable "domains" {
       rocket_loader = optional(bool, false)   # async JS loading
     }), {})
 
+    # Shortcut: auto-creates proxied A records for @ and www pointing to the same IP
+    apex_ip = optional(string, null)
+
     # Convenience: auto-add Google Workspace MX + SPF + DMARC
     google_workspace = optional(bool, false)
 
@@ -54,6 +57,13 @@ variable "domains" {
     # DMARC policy: none (monitor) → quarantine → reject
     # Recommended: start with "none", move to "reject" once DKIM is set up
     dmarc_policy = optional(string, "none")
+
+    # Google Search Console domain verification token (the part after "google-site-verification=")
+    google_site_verification = optional(string, null)
+
+    # Google Workspace DKIM public key (from GWS Admin > Apps > Gmail > Authenticate email)
+    # Paste only the key value (p=...), the full record is built automatically
+    google_dkim_key = optional(string, null)
 
     # 301 redirect entire zone to another domain
     redirect_to = optional(string, null)

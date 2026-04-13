@@ -61,6 +61,58 @@ locals {
         "${domain}__${lower(r.type)}__${replace(r.name, ".", "_")}__${replace(r.value, ".", "_")}__${coalesce(r.priority, 0)}" => merge(r, { domain = domain })
       },
 
+      # apex_ip: proxied A records for @ and www
+      cfg.apex_ip != null ? {
+        "${domain}__a__@__${replace(cfg.apex_ip, ".", "_")}__0" = {
+          domain   = domain
+          type     = "A"
+          name     = "@"
+          value    = cfg.apex_ip
+          ttl      = 1
+          proxied  = true
+          priority = null
+          comment  = "Apex (auto)"
+        }
+        "${domain}__a__www__${replace(cfg.apex_ip, ".", "_")}__0" = {
+          domain   = domain
+          type     = "A"
+          name     = "www"
+          value    = cfg.apex_ip
+          ttl      = 1
+          proxied  = true
+          priority = null
+          comment  = "www (auto)"
+        }
+      } : {},
+
+      # google_site_verification TXT
+      cfg.google_site_verification != null ? {
+        "${domain}__txt__@__google_site_verification__0" = {
+          domain   = domain
+          type     = "TXT"
+          name     = "@"
+          value    = "google-site-verification=${cfg.google_site_verification}"
+          ttl      = 1
+          proxied  = false
+          priority = null
+          comment  = "Google Search Console (auto)"
+        }
+      } : {},
+
+      # google_dkim_key: DKIM TXT record for Google Workspace
+      cfg.google_dkim_key != null ? {
+        "${domain}__txt__google__domainkey__dkim__0" = {
+          domain   = domain
+          type     = "TXT"
+          name     = "google._domainkey"
+          value    = "v=DKIM1; k=rsa; p=${cfg.google_dkim_key}"
+          ttl      = 1
+          proxied  = false
+          priority = null
+          comment  = "Google DKIM (auto)"
+        }
+      } : {},
+
       # GWS: MX records
       cfg.google_workspace ? {
         for mx in local.gws_mx_records :
