@@ -44,11 +44,7 @@ locals {
   }
 
   gws_mx_records = [
-    { name = "@", value = "aspmx.l.google.com", priority = 1 },
-    { name = "@", value = "alt1.aspmx.l.google.com", priority = 5 },
-    { name = "@", value = "alt2.aspmx.l.google.com", priority = 5 },
-    { name = "@", value = "alt3.aspmx.l.google.com", priority = 10 },
-    { name = "@", value = "alt4.aspmx.l.google.com", priority = 10 },
+    { name = "@", value = "smtp.google.com", priority = 1 },
   ]
 
   gws_cname_records = [
