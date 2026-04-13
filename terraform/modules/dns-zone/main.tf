@@ -111,7 +111,7 @@ locals {
           domain   = domain
           type     = "TXT"
           name     = "_dmarc"
-          value    = "v=DMARC1; p=none; rua=mailto:dmarc@${domain}"
+          value    = "v=DMARC1; p=${cfg.dmarc_policy}; rua=mailto:dmarc@${domain}"
           ttl      = 1
           proxied  = false
           priority = null

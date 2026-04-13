@@ -6,6 +6,7 @@ domains = {
     plan             = "free"
     google_workspace = true
     spf_includes     = ["sendgrid.net"]
+    dmarc_policy     = "reject" # none → quarantine → reject (tighten after DKIM is set up)
 
     records = [
       # Main site — proxied through Cloudflare
@@ -47,6 +48,7 @@ domains = {
   "acme-shop.com" = {
     plan             = "pro"
     google_workspace = true
+    dmarc_policy     = "quarantine"
 
     # Optional: override specific Pro defaults
     # settings = {

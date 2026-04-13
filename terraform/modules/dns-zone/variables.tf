@@ -51,6 +51,10 @@ variable "domains" {
     # Extra SPF includes (appended when google_workspace = true)
     spf_includes = optional(list(string), [])
 
+    # DMARC policy: none (monitor) → quarantine → reject
+    # Recommended: start with "none", move to "reject" once DKIM is set up
+    dmarc_policy = optional(string, "none")
+
     # 301 redirect entire zone to another domain
     redirect_to = optional(string, null)
 
@@ -85,5 +89,13 @@ variable "domains" {
       ]
     ]))
     error_message = "record type must be one of: A, AAAA, CNAME, MX, TXT, NS, SRV, CAA, PTR."
+  }
+
+  validation {
+    condition = alltrue([
+      for name, cfg in var.domains :
+      contains(["none", "quarantine", "reject"], cfg.dmarc_policy)
+    ])
+    error_message = "dmarc_policy must be one of: none, quarantine, reject."
   }
 }
