@@ -289,7 +289,7 @@ moved {
 
 Commit that file, and the moves appear in the normal plan as `has moved to` with no destroys. Apply through the usual pipeline, then delete the file in a follow-up change — `moved` blocks are only needed once.
 
-Matching never reconstructs old key formats, because there have been several. A record in state with no counterpart in the configuration is reported separately: it is not moved, and it will be destroyed on apply.
+Matching never reconstructs old key formats, because there have been several. A record in state with no counterpart in the configuration is reported separately: it is not moved, and it will be destroyed on apply. If two records in state resolve to the same target address, nothing is written at all — merging them would lose one.
 
 ## State operations (manual)
 
