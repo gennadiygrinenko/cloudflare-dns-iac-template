@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Scan Terraform and workflows
         uses: aquasecurity/trivy-action@v0.36.0
