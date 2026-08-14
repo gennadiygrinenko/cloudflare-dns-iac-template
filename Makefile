@@ -9,6 +9,10 @@
 
 ZONES_DIR := envs/cloudflare/zones
 
+# Lock hashes are per platform: CI is linux_amd64, laptops are darwin_*.
+# A lock without the CI platform fails init on the runner.
+LOCK_PLATFORMS := -platform=linux_amd64 -platform=darwin_amd64 -platform=darwin_arm64
+
 # Require zone variable for zone-scoped targets
 .check-zone:
 	@[ -n "$(zone)" ] || (echo "❌ Usage: make $(MAKECMDGOALS) zone=<zone>"; exit 1)
@@ -58,6 +62,16 @@ validate: .check-zone ## terragrunt validate for a zone
 .PHONY: state-list
 state-list: .check-zone ## List all resources in state for a zone
 	cd $(ZONES_DIR)/$(zone) && terragrunt state list
+
+.PHONY: lock
+lock: .check-zone ## Refresh .terraform.lock.hcl for a zone (all platforms)
+	cd $(ZONES_DIR)/$(zone) && terragrunt init -backend=false --terragrunt-non-interactive \
+		&& terraform providers lock $(LOCK_PLATFORMS)
+
+.PHONY: lock-upgrade
+lock-upgrade: .check-zone ## Move a zone to the newest provider allowed by versions.tf
+	cd $(ZONES_DIR)/$(zone) && terragrunt init -backend=false -upgrade --terragrunt-non-interactive \
+		&& terraform providers lock $(LOCK_PLATFORMS)
 
 # ── State operations ─────────────────────────────────────────────────────────
 

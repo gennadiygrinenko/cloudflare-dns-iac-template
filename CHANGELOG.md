@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+- Zone `.terraform.lock.hcl` files are committed and pin `cloudflare/cloudflare` 5.23.0 with hashes for linux and macOS. Previously they were gitignored, so every run resolved to whatever the newest 5.x was that day
+- `make lock` / `make lock-upgrade` to refresh or raise the pinned provider
+
 ### CI
 - **Fixed:** Deploy reported success when `terragrunt plan` failed. The pipe to `tee` discarded the exit code, "no changes" was inferred by grepping the log, and Apply treated a missing artifact as an empty plan. Plan now uses `-detailed-exitcode` with `PIPESTATUS`, and always uploads either a plan or a `NO_CHANGES` marker, so a missing artifact is a failure
 - Deploy preflight job: without `TF_CLOUD_ORGANIZATION`, `CLOUDFLARE_ACCOUNT_ID`, `TF_API_TOKEN`, and `CLOUDFLARE_API_TOKEN`, plan and apply are skipped with a summary explaining why

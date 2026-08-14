@@ -49,6 +49,14 @@ Two related judgments:
 - **Do not duplicate the receiving zone into another group to make the automation trigger.** Two states managing one Cloudflare zone is a worse failure than a manual TXT record. The output exists precisely so the record can be added by hand in the group that owns the zone.
 - **Organizational domains are approximated.** RFC 7489 compares org-domains, which requires the Public Suffix List; Terraform cannot read it. Nesting is used instead, and the error direction is chosen deliberately. Siblings (`a.shop.com` → `dmarc@b.shop.com`) produce a spurious checklist entry, which is harmless. The dangerous direction — a public-suffix parent like `shop.co.uk` → `dmarc@co.uk` looking internal — is blocked by requiring the parent to be a managed zone, since a public suffix can never be a zone in a Cloudflare account.
 
+## Provider version: loose constraint, committed lock
+
+`versions.tf` allows `~> 5.0`, and each zone commits a `.terraform.lock.hcl` pinning the exact build. The constraint says what the module is compatible with; the lock says what actually ran.
+
+Without the lock — it was previously gitignored — the same commit resolved to whatever the newest 5.x happened to be that day. Two runs a month apart could plan differently with no diff to explain it, which turns a provider regression into a hunt through your own code. Lock files carry per-platform hashes, so `make lock` records linux (CI) and both macOS architectures; a lock missing the CI platform fails `init` on the runner.
+
+The module directory deliberately has no lock. Lock files belong to root modules; a lock inside a reusable module is ignored by consumers and only rots.
+
 ## Credentials: scoped secrets, not OIDC
 
 State lives in Terraform Cloud, so no state file or cloud credential is stored in the repository, and `terraform.tfstate` never appears in a diff. Cloudflare is reached with a scoped API token (Zone:Edit + DNS:Edit) from GitHub Secrets; Terraform Cloud with `TF_API_TOKEN`.

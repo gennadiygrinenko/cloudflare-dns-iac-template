@@ -1,6 +1,9 @@
 # Terraform
 .terraform/
+# Lock files are committed for zones (root modules) so every plan resolves to
+# the same provider build; the module is consumed locally and locks nothing.
 .terraform.lock.hcl
+!envs/cloudflare/zones/*/.terraform.lock.hcl
 *.tfstate
 *.tfstate.backup
 *.tfplan
