@@ -191,17 +191,38 @@ When `google_workspace = true`, the following DNS records are created automatica
 | MX | `@` | `smtp.google.com` (priority 1) |
 | CNAME | `mail` | `ghs.googlehosted.com` |
 | CNAME | `calendar` | `ghs.googlehosted.com` |
-| TXT | `@` | `v=spf1 include:_spf.google.com [spf_includes] ~all` |
-| TXT | `_dmarc` | `v=DMARC1; p=<dmarc_policy>; rua=mailto:dmarc@<domain>` |
+| TXT | `@` | `v=spf1 include:_spf.google.com [spf_includes] <spf_policy>` |
+| TXT | `_dmarc` | `v=DMARC1; p=<dmarc_policy>; rua=mailto:<dmarc_rua>` |
 
 Optional parameters:
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `spf_includes` | `list(string)` | Extra SPF includes, e.g. `["sendgrid.net", "mailchimp.com"]` |
+| `spf_policy` | `string` | `~all` (default, softfail) \| `-all` (fail) \| `?all` (neutral) |
 | `dmarc_policy` | `string` | `none` (default) → `quarantine` → `reject` |
+| `dmarc_rua` | `string` | Aggregate report mailbox. Defaults to `dmarc@<domain>`; `mailto:` and case are normalized |
 | `google_site_verification` | `string` | Token from Google Search Console (the part after `google-site-verification=`) |
 | `google_dkim_key` | `string` | DKIM public key from GWS Admin → Apps → Gmail → Authenticate email |
+
+### DMARC reports to another domain
+
+Per RFC 7489 §7.1, sending reports to a mailbox outside the publishing domain requires the **receiving** zone to authorize it. For `shop.com` with `rua=mailto:dmarc@acme.com`, receivers look up `shop.com._report._dmarc.acme.com TXT "v=DMARC1"` — a record in `acme.com`, not in `shop.com`. Publishing it on the sender does nothing.
+
+The module handles the three cases:
+
+1. **Mailbox in the same domain tree** (the default `dmarc@<domain>`, or `dmarc@reports.<domain>`) — nothing to authorize.
+2. **Mailbox in another zone in this same `domains` map** — the authorization record is created for you, in the zone that owns the mailbox. The longest managed suffix wins, since a delegated child zone is authoritative over its parent, and intermediate labels are kept: with `reports.acme.com` managed, `shop.com` → `dmarc@a.reports.acme.com` creates `shop.com._report._dmarc.a` in `reports.acme.com`.
+3. **Mailbox anywhere else** — nothing is created and nothing fails. The entry appears in the `dmarc_external_authorizations_required` output instead. Report vendors (EasyDMARC, dmarcian, Valimail) publish a wildcard on their side, so this is a checklist to verify, not an error.
+
+Do **not** copy the receiving domain into a second zone group to get case 2. Two Terragrunt stacks with the same domain means two states fighting over one Cloudflare zone. If publisher and mailbox live in different groups, take the output and add a plain TXT record in the group that actually owns the receiving zone.
+
+Two limits worth knowing, both deliberate:
+
+- Org-domain comparison needs the Public Suffix List, which Terraform cannot read, so nesting is used as an approximation. `a.shop.com` → `dmarc@b.shop.com` is one org-domain but neither is a suffix of the other, so it lands in the checklist even though no record is needed. A harmless extra line. The reverse (a parent that is a public suffix, like `shop.co.uk` → `dmarc@co.uk`) would be the dangerous direction, so the parent case additionally requires the parent to be a zone in this `domains` map.
+- The mirror case — a `domains` key that is itself a public suffix, making its subdomains look internal — is a known non-goal. It requires owning a PSL entry.
+
+A managed child zone only answers if its parent delegates to it. If the parent is in the same `domains` map and has no `NS` record for the child, the case-2 record would be written into a zone nobody queries; that shows up in the `dmarc_report_delegation_warnings` output. Delegation configured outside this module is invisible here and is not reported.
 
 ### DNS record keys
 

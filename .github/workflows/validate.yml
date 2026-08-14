@@ -121,6 +121,46 @@ jobs:
 
           exit "$EXIT_CODE"
 
+  # ── DMARC report authorizations we cannot publish ourselves ──────────────
+  # A rua mailbox in an unmanaged zone needs a record there, or reports are
+  # silently dropped. Advisory only: never fails the PR, and skipped for forks,
+  # which have no secrets and would otherwise get a red badge.
+  dmarc-checklist:
+    name: DMARC report checklist
+    needs: [detect-zones, validate]
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform ${{ env.TERRAFORM_VERSION }}
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Install Terragrunt
+        run: bash .github/scripts/install-terragrunt.sh "${{ env.TERRAGRUNT_VERSION }}"
+
+      - name: Collect checklist
+        id: collect
+        env:
+          ZONES: ${{ needs.detect-zones.outputs.zones }}
+          TG_BACKEND: local
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || '0123456789abcdef0123456789abcdef' }}
+        run: bash .github/scripts/dmarc-checklist.sh
+
+      - name: Comment on PR
+        if: steps.collect.outputs.has_findings == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr comment "$PR" --body-file /tmp/dmarc-checklist.md --edit-last \
+            || gh pr comment "$PR" --body-file /tmp/dmarc-checklist.md
+
   # ── Summary gate — single status check for branch protection ─────────────
   validate-complete:
     name: Validate complete

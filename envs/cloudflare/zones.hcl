@@ -55,11 +55,23 @@ generate "main" {
     }
 
     output "zone_ids" {
-      value = module.dns_zone.zone_ids
+      description = "Map of domain name → Cloudflare zone ID."
+      value       = module.dns_zone.zone_ids
     }
 
     output "zone_name_servers" {
-      value = module.dns_zone.zone_name_servers
+      description = "Map of domain name → list of Cloudflare nameservers."
+      value       = module.dns_zone.zone_name_servers
+    }
+
+    output "dmarc_external_authorizations_required" {
+      description = "DMARC report authorizations that must be published in zones this module does not manage."
+      value       = module.dns_zone.dmarc_external_authorizations_required
+    }
+
+    output "dmarc_report_delegation_warnings" {
+      description = "Managed child zones holding a report authorization without NS delegation from their managed parent."
+      value       = module.dns_zone.dmarc_report_delegation_warnings
     }
   EOF
 }
