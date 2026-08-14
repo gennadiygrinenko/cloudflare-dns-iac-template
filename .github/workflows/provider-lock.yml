@@ -9,7 +9,10 @@ name: Provider lock
 
 on:
   schedule:
-    - cron: "23 6 * * 1"
+    # Monthly. A provider patch a week earlier changes nothing here; action
+    # deprecations are the time-sensitive half, and Dependabot covers those
+    # weekly.
+    - cron: "23 6 1 * *"
   workflow_dispatch:
 
 permissions:
