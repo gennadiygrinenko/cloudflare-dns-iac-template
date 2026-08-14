@@ -21,6 +21,7 @@ permissions:
 env:
   TERRAFORM_VERSION: "1.9.8"
   TERRAGRUNT_VERSION: "0.67.0"
+  TFLINT_VERSION: "v0.64.0"
   TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
 
 jobs:
@@ -78,7 +79,7 @@ jobs:
       - name: tflint
         uses: terraform-linters/setup-tflint@v4
         with:
-          tflint_version: latest
+          tflint_version: ${{ env.TFLINT_VERSION }}
 
       - name: Run tflint
         run: |

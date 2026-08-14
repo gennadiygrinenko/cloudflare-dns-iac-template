@@ -1,0 +1,68 @@
+name: Security
+
+# Misconfiguration scan for the Terraform module and the workflows.
+#
+# Deliberately not part of Validate: findings land in the Security tab as code
+# scanning alerts instead of turning a pull request red. A scanner that blocks
+# merges on advisory findings gets disabled within a week; one that files alerts
+# stays useful. Tighten to a gate once the baseline is clean and understood.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "terraform/**"
+      - ".github/workflows/**"
+  push:
+    branches: [main]
+    paths:
+      - "terraform/**"
+      - ".github/workflows/**"
+  schedule:
+    # Rules change even when the code does not.
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: read
+  security-events: write
+
+env:
+  TRIVY_VERSION: "0.74.0"
+
+jobs:
+  trivy-config:
+    name: Trivy misconfiguration scan
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan Terraform and workflows
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          scan-type: config
+          scan-ref: .
+          version: v${{ env.TRIVY_VERSION }}
+          format: sarif
+          output: trivy.sarif
+          # Advisory: alerts are the output, not a failed job.
+          exit-code: "0"
+          # Terragrunt writes these during plan; they are not source.
+          skip-dirs: "**/.terragrunt-cache"
+
+      - name: Upload results to code scanning
+        uses: github/codeql-action/upload-sarif@v3
+        continue-on-error: true
+        with:
+          sarif_file: trivy.sarif
+          category: trivy-config
+
+      - name: Summarize
+        run: |
+          count=$(jq '[.runs[].results[]] | length' trivy.sarif 2>/dev/null || echo 0)
+          echo "### Trivy misconfiguration scan" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$count" -eq 0 ]; then
+            echo "No misconfigurations found." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "${count} finding(s) — see the Security tab (code scanning, category \`trivy-config\`)." >> "$GITHUB_STEP_SUMMARY"
+          fi

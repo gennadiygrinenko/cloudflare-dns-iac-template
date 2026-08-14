@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### CI
+- Dependabot for GitHub Actions and the Terraform provider constraint
+- `tflint` version pinned instead of tracking `latest`
+- Trivy misconfiguration scan in a separate `Security` workflow, reporting to code scanning rather than blocking pull requests
+
 ### Documentation
 - `docs/DESIGN_DECISIONS.md` — rationale for state isolation, TXT-scoped `ignore_changes`, hashed record keys, `prevent_destroy`, `coalesce` defaults, DMARC report authorization, and the credential model
 - README: `## Why this exists`, and an accurate description of the credential model (scoped API tokens, not OIDC)
