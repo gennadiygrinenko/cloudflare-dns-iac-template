@@ -87,9 +87,11 @@ jobs:
 
       - name: terragrunt validate — ${{ matrix.zone }}
         env:
+          # Local backend: GitHub vars.TF_CLOUD_ORGANIZATION is often "" which
+          # overrides Terragrunt's default and breaks `cloud {}` with hostname "".
+          TG_BACKEND: local
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          TF_CLOUD_ORGANIZATION: ${{ vars.TF_CLOUD_ORGANIZATION }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || '0123456789abcdef0123456789abcdef' }}
         run: |
           source .github/scripts/common.sh
           log_section "Validate: ${{ matrix.zone }}"
