@@ -53,6 +53,7 @@ It is aimed at whoever owns a handful to a few dozen domains: an in-house platfo
 │   └── workflows/
 │       ├── validate.yml          # PR: validate changed zones in parallel
 │       ├── deploy.yml            # main: plan → apply (with approval gate)
+│       ├── provider-lock.yml     # Weekly: refresh provider lock, open a PR
 │       ├── security.yml          # Trivy config scan → code scanning alerts
 │       └── state-ops.yml         # Manual: import/remove/move domain
 ├── docs/
