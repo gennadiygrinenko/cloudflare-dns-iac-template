@@ -10,5 +10,8 @@ output "zone_name_servers" {
 
 output "dns_record_ids" {
   description = "Map of record key → Cloudflare DNS record ID."
-  value       = { for key, rec in cloudflare_dns_record.this : key => rec.id }
+  value = merge(
+    { for key, rec in cloudflare_dns_record.this : key => rec.id },
+    { for key, rec in cloudflare_dns_record.txt : key => rec.id },
+  )
 }

@@ -203,6 +203,14 @@ Optional parameters:
 | `google_site_verification` | `string` | Token from Google Search Console (the part after `google-site-verification=`) |
 | `google_dkim_key` | `string` | DKIM public key from GWS Admin → Apps → Gmail → Authenticate email |
 
+### DNS record keys
+
+Each record is keyed as `{domain}__{type}__{name}__{hash12}`, where `hash12` is the first 12 hex characters of `sha256(value:priority)`. Domain, type, and name stay readable in plans; the hash is there so two payloads that only differ by `.` vs `_` cannot collide and silently drop a record.
+
+The key includes the value, so changing a record's content or priority is a replace, not an in-place update. That is how SPF, DMARC, DKIM, and Google site verification updates apply: those four auto-TXT records used to have stable keys with `ignore_changes = [content]` on every record, so Terraform ignored the new value. `ignore_changes` is now only on TXT, and it does not apply across a replace.
+
+Existing state from before this key scheme will destroy and recreate every DNS record on first apply (TXT also move to `cloudflare_dns_record.txt`). For a live estate, `terraform state mv` old addresses onto the new keys, or accept a brief recreate.
+
 ### All available settings
 
 ```hcl
