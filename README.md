@@ -5,7 +5,7 @@
 [![Terraform](https://img.shields.io/badge/terraform-%3E%3D1.9-blueviolet?logo=terraform)](https://www.terraform.io/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-> Production-ready IaC template for managing Cloudflare DNS across multiple zones using Terraform + Terragrunt + GitHub Actions.
+> Terraform + Terragrunt + GitHub Actions template for managing Cloudflare DNS across multiple zones: isolated state per zone group, module logic covered by `terraform test`, and safety rails around the changes that DNS cannot undo.
 
 ## Why this exists
 
