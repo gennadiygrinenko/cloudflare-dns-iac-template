@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+- Scope `ignore_changes` to TXT records. Auto-generated GSC, DKIM, SPF, and DMARC records previously kept a stable key, so content updates were silently ignored.
+- Derive `for_each` keys from a hash of value + priority so `replace(".", "_")` cannot collide two records into one map entry.
+
+### Changed
+- DNS records are split into `cloudflare_dns_record.this` (non-TXT) and `cloudflare_dns_record.txt`.
+- Record keys are `{domain}__{type}__{name}__{hash12}`. **Breaking:** existing state will recreate every DNS record unless addresses are `state mv`'d.
+
 ## [1.2.0] - 2026-04-13
 
 ### Added

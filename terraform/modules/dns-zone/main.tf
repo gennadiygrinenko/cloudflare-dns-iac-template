@@ -52,18 +52,13 @@ locals {
     { name = "calendar", value = "ghs.googlehosted.com" },
   ]
 
-  # Build all records per domain (user-defined + GWS auto-records)
-  all_records = merge(flatten([
-    for domain, cfg in var.domains : [
-      # User-defined records
-      {
-        for r in cfg.records :
-        "${domain}__${lower(r.type)}__${replace(r.name, ".", "_")}__${replace(r.value, ".", "_")}__${coalesce(r.priority, 0)}" => merge(r, { domain = domain })
-      },
-
-      # apex_ip: proxied A records for @ and www
-      cfg.apex_ip != null ? {
-        "${domain}__a__@__${replace(cfg.apex_ip, ".", "_")}__0" = {
+  # Flattened record objects (no keys). Keyed once below so a collision
+  # cannot silently drop a record in one of several map constructors.
+  all_records_list = flatten([
+    for domain, cfg in var.domains : concat(
+      [for r in cfg.records : merge(r, { domain = domain })],
+      cfg.apex_ip != null ? [
+        {
           domain   = domain
           type     = "A"
           name     = "@"
@@ -72,8 +67,8 @@ locals {
           proxied  = true
           priority = null
           comment  = "Apex (auto)"
-        }
-        "${domain}__a__www__${replace(cfg.apex_ip, ".", "_")}__0" = {
+        },
+        {
           domain   = domain
           type     = "A"
           name     = "www"
@@ -82,12 +77,10 @@ locals {
           proxied  = true
           priority = null
           comment  = "www (auto)"
-        }
-      } : {},
-
-      # google_site_verification TXT
-      cfg.google_site_verification != null ? {
-        "${domain}__txt__@__google_site_verification__0" = {
+        },
+      ] : [],
+      cfg.google_site_verification != null ? [
+        {
           domain   = domain
           type     = "TXT"
           name     = "@"
@@ -96,12 +89,10 @@ locals {
           proxied  = false
           priority = null
           comment  = "Google Search Console (auto)"
-        }
-      } : {},
-
-      # google_dkim_key: DKIM TXT record for Google Workspace
-      cfg.google_dkim_key != null ? {
-        "${domain}__txt__google__domainkey__dkim__0" = {
+        },
+      ] : [],
+      cfg.google_dkim_key != null ? [
+        {
           domain   = domain
           type     = "TXT"
           name     = "google._domainkey"
@@ -110,13 +101,10 @@ locals {
           proxied  = false
           priority = null
           comment  = "Google DKIM (auto)"
-        }
-      } : {},
-
-      # GWS: MX records
-      cfg.google_workspace ? {
-        for mx in local.gws_mx_records :
-        "${domain}__mx__${replace(mx.name, ".", "_")}__${replace(mx.value, ".", "_")}__${mx.priority}" => {
+        },
+      ] : [],
+      cfg.google_workspace ? [
+        for mx in local.gws_mx_records : {
           domain   = domain
           type     = "MX"
           name     = mx.name
@@ -126,12 +114,9 @@ locals {
           priority = mx.priority
           comment  = "Google Workspace MX (auto)"
         }
-      } : {},
-
-      # GWS: CNAME records
-      cfg.google_workspace ? {
-        for cn in local.gws_cname_records :
-        "${domain}__cname__${cn.name}__${replace(cn.value, ".", "_")}__0" => {
+      ] : [],
+      cfg.google_workspace ? [
+        for cn in local.gws_cname_records : {
           domain   = domain
           type     = "CNAME"
           name     = cn.name
@@ -141,11 +126,9 @@ locals {
           priority = null
           comment  = "Google Workspace CNAME (auto)"
         }
-      } : {},
-
-      # GWS: SPF TXT
-      cfg.google_workspace ? {
-        "${domain}__txt__@__spf__0" = {
+      ] : [],
+      cfg.google_workspace ? [
+        {
           domain   = domain
           type     = "TXT"
           name     = "@"
@@ -154,12 +137,10 @@ locals {
           proxied  = false
           priority = null
           comment  = "SPF (auto)"
-        }
-      } : {},
-
-      # GWS: DMARC TXT
-      cfg.google_workspace ? {
-        "${domain}__txt___dmarc__dmarc__0" = {
+        },
+      ] : [],
+      cfg.google_workspace ? [
+        {
           domain   = domain
           type     = "TXT"
           name     = "_dmarc"
@@ -168,10 +149,23 @@ locals {
           proxied  = false
           priority = null
           comment  = "DMARC (auto)"
-        }
-      } : {},
-    ]
-  ])...)
+        },
+      ] : [],
+    )
+  ])
+
+  # Prefix stays readable; payload is hashed so replace(".", "_") cannot
+  # collide (e.g. 1.2.3.4 vs 1_2_3_4). Changing value or priority replaces
+  # the record — ignore_changes on TXT content does not block that.
+  all_records = {
+    for r in local.all_records_list :
+    "${r.domain}__${lower(r.type)}__${r.name}__${substr(sha256("${r.value}:${coalesce(r.priority, 0)}"), 0, 12)}" => r
+  }
+
+  # Cloudflare reformats long TXT (DKIM) into 255-char chunks — format drift
+  # is inevitable only there. Other types must apply content updates in place.
+  records_txt     = { for k, v in local.all_records : k => v if v.type == "TXT" }
+  records_regular = { for k, v in local.all_records : k => v if v.type != "TXT" }
 }
 
 # -------------------------------------------------------------------
@@ -314,7 +308,7 @@ resource "cloudflare_zone_setting" "rocket_loader" {
 # DNS Records
 # -------------------------------------------------------------------
 resource "cloudflare_dns_record" "this" {
-  for_each = local.all_records
+  for_each = local.records_regular
 
   zone_id  = cloudflare_zone.this[each.value.domain].id
   type     = each.value.type
@@ -324,9 +318,21 @@ resource "cloudflare_dns_record" "this" {
   proxied  = each.value.proxied
   priority = each.value.priority
   comment  = each.value.comment
+}
+
+resource "cloudflare_dns_record" "txt" {
+  for_each = local.records_txt
+
+  zone_id  = cloudflare_zone.this[each.value.domain].id
+  type     = each.value.type
+  name     = each.value.name
+  content  = each.value.value
+  ttl      = coalesce(each.value.ttl, 1)
+  proxied  = false
+  priority = null
+  comment  = each.value.comment
 
   lifecycle {
-    # Avoid perpetual drift on TXT records that Cloudflare auto-formats
     ignore_changes = [content]
   }
 }
