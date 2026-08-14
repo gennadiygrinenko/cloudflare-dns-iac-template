@@ -49,9 +49,11 @@ It is aimed at whoever owns a handful to a few dozen domains: an in-house platfo
 │   │   ├── dmarc-checklist.sh    # DMARC authorizations we cannot publish ourselves
 │   │   ├── install-terragrunt.sh # Install Terragrunt in CI
 │   │   └── state-ops.sh          # Import / remove / move domain state ops
+│   ├── dependabot.yml            # Action + provider version updates
 │   └── workflows/
 │       ├── validate.yml          # PR: validate changed zones in parallel
 │       ├── deploy.yml            # main: plan → apply (with approval gate)
+│       ├── security.yml          # Trivy config scan → code scanning alerts
 │       └── state-ops.yml         # Manual: import/remove/move domain
 ├── docs/
 │   └── DESIGN_DECISIONS.md       # Why the module is shaped this way
