@@ -64,7 +64,7 @@ jobs:
       zones: ${{ steps.detect.outputs.zones }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: List zones with domains
         id: detect
         run: bash .github/scripts/detect-zones.sh
@@ -81,10 +81,10 @@ jobs:
         zone: ${{ fromJson(needs.detect-zones.outputs.zones) }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Terraform ${{ env.TERRAFORM_VERSION }}
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
           terraform_wrapper: false
@@ -94,7 +94,7 @@ jobs:
         run: bash .github/scripts/install-terragrunt.sh "${{ env.TERRAGRUNT_VERSION }}"
 
       - name: Cache Terraform plugins
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ env.TF_PLUGIN_CACHE_DIR }}
           key: tf-plugins-${{ env.TERRAFORM_VERSION }}-${{ hashFiles('**/versions.tf') }}
@@ -148,7 +148,7 @@ jobs:
           esac
 
       - name: Upload plan artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tfplan-${{ matrix.zone }}-${{ github.run_id }}
           path: |
@@ -174,10 +174,10 @@ jobs:
       cancel-in-progress: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Terraform ${{ env.TERRAFORM_VERSION }}
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
           terraform_wrapper: false
@@ -187,7 +187,7 @@ jobs:
         run: bash .github/scripts/install-terragrunt.sh "${{ env.TERRAGRUNT_VERSION }}"
 
       - name: Cache Terraform plugins
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ env.TF_PLUGIN_CACHE_DIR }}
           key: tf-plugins-${{ env.TERRAFORM_VERSION }}-${{ hashFiles('**/versions.tf') }}
@@ -196,7 +196,7 @@ jobs:
       # No continue-on-error: the plan job always uploads either a plan or a
       # NO_CHANGES marker, so a failed download is a real failure.
       - name: Download plan artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: tfplan-${{ matrix.zone }}-${{ github.run_id }}
           path: envs/cloudflare/zones/${{ matrix.zone }}/
