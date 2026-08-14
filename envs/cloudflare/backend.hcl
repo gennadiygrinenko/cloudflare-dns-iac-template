@@ -1,5 +1,9 @@
 # Root Terragrunt backend config.
-# Terraform Cloud (HCP) remote backend for plan/apply.
+# Terraform Cloud (HCP) remote backend for plan/apply: state stays out of the
+# repo, but TFC itself is still reached with a static token (TF_API_TOKEN), and
+# Cloudflare with CLOUDFLARE_API_TOKEN. Neither is OIDC — see
+# docs/DESIGN_DECISIONS.md.
+#
 # Set TF_CLOUD_ORGANIZATION via environment variables, or override locals.
 # CI validate sets TG_BACKEND=local so PRs do not need a TFC organization.
 

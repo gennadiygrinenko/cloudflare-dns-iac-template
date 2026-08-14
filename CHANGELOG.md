@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Documentation
+- `docs/DESIGN_DECISIONS.md` — rationale for state isolation, TXT-scoped `ignore_changes`, hashed record keys, `prevent_destroy`, `coalesce` defaults, DMARC report authorization, and the credential model
+- README: `## Why this exists`, and an accurate description of the credential model (scoped API tokens, not OIDC)
+
 ### Added
 - `dmarc_rua` — aggregate report mailbox, defaulting to `dmarc@<domain>`; `mailto:` prefix and case are normalized
 - `spf_policy` (`~all` | `-all` | `?all`) with validation
