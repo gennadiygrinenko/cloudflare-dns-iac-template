@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - "envs/cloudflare/zones/**"
+      - "envs/cloudflare/**"
       - "terraform/modules/**"
       - ".github/workflows/**"
       - ".github/scripts/**"
