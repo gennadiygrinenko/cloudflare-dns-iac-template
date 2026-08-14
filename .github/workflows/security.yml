@@ -19,8 +19,9 @@ on:
       - "terraform/**"
       - ".github/workflows/**"
   schedule:
-    # Rules change even when the code does not.
-    - cron: "17 6 * * 1"
+    # Rules change even when the code does not. Monthly: this config is small
+    # and rarely moves, so a weekly rerun is noise rather than coverage.
+    - cron: "17 6 1 * *"
 
 permissions:
   contents: read
