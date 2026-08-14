@@ -7,12 +7,20 @@
 
 > Production-ready IaC template for managing Cloudflare DNS across multiple zones using Terraform + Terragrunt + GitHub Actions.
 
+## Why this exists
+
+DNS is the infrastructure with the worst ratio of change size to blast radius. One wrong record takes down mail or the site, propagation makes the mistake outlive the fix, and there is no undo. It is also the layer most often edited by hand in a dashboard, because each individual change looks too small to deserve a pull request.
+
+This template is the smallest setup that makes DNS reviewable without making it tedious. Domains are declared as data in `variables.auto.tfvars`; the module turns that into zones, records, settings, redirects, and WAF rules. Google Workspace mail is one flag rather than a dozen hand-copied records, and the parts that are easy to get subtly wrong — SPF syntax, DMARC report authorization on the receiving zone, DKIM drift — are handled or surfaced explicitly rather than left to the reader.
+
+It is aimed at whoever owns a handful to a few dozen domains: an in-house platform or ops engineer, a consultancy managing client estates, a team that inherited domains across several accounts. The difference from dropping `cloudflare_dns_record` resources into one file is mostly what happens after the happy path — isolated state per zone group so one change plans in seconds and one mistake cannot reach every domain, `prevent_destroy` because DNS has no undo, keys that cannot silently collide, and drift suppression scoped to the one record type that actually drifts. The reasoning behind each of those is in [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md).
+
 ## Features
 
 - **Multi-zone structure** — each logical group of domains is an isolated Terraform workspace
 - **DRY config** — Terragrunt code generation; zone dirs contain only `variables.auto.tfvars`
 - **GitHub Actions CI/CD** — validate on PR, plan + apply on merge to `main` with required approvals
-- **Terraform Cloud backend** — remote state, no static cloud credentials needed
+- **Terraform Cloud backend** — remote state, so no state file or credential lives in the repo (Cloudflare and TFC are reached with scoped API tokens from GitHub Secrets)
 - **Google Workspace auto-records** — set `google_workspace = true` to auto-generate MX, SPF, DMARC, DKIM, CNAME records
 - **Apex shortcut** — set `apex_ip` to auto-create proxied `@` and `www` A records in one line
 - **Domain redirect** — set `redirect_to` for a 301 redirect ruleset
@@ -38,12 +46,15 @@
 │   ├── scripts/
 │   │   ├── common.sh             # Shared logging utilities (log_info, log_success, etc.)
 │   │   ├── detect-zones.sh       # Detect changed/all zones for CI matrix
+│   │   ├── dmarc-checklist.sh    # DMARC authorizations we cannot publish ourselves
 │   │   ├── install-terragrunt.sh # Install Terragrunt in CI
 │   │   └── state-ops.sh          # Import / remove / move domain state ops
 │   └── workflows/
 │       ├── validate.yml          # PR: validate changed zones in parallel
 │       ├── deploy.yml            # main: plan → apply (with approval gate)
 │       └── state-ops.yml         # Manual: import/remove/move domain
+├── docs/
+│   └── DESIGN_DECISIONS.md       # Why the module is shaped this way
 ├── envs/cloudflare/
 │   ├── backend.hcl               # Terraform Cloud backend (shared)
 │   ├── zones.hcl                 # Provider + module wiring (shared)
