@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - `make moves zone=<zone>` — generates a `moved.tf` for records whose address changed, matching state to configuration by zone, type, name, content, and priority rather than by reconstructing an old key format. The 2.0.0 key change becomes a reviewable set of `moved` blocks instead of a destroy-and-create of every record, which for MX and the SPF/DKIM/DMARC TXT records was a gap in mail delivery
 - Records present in state but absent from the configuration are reported separately, since they are destroyed rather than moved
+- `make moves` refuses to write anything when two records in state resolve to the same target address, rather than emitting a `moved.tf` that would merge them and lose one
 - `dns_records` is now exposed through the Terragrunt-generated root outputs, not just the module
 
 ## [2.0.0] - 2026-08-14

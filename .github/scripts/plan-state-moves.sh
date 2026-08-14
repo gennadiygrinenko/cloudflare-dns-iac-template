@@ -96,11 +96,16 @@ report="$(
             matched: ($match != null),
           }
       )
+    | (map(select(.matched and .from != .to))) as $moves
     | {
         total: length,
-        moves: map(select(.matched and .from != .to)),
+        moves: $moves,
         # In state but not in the configuration: these are destroyed on apply.
         orphans: map(select(.matched | not) | "\(.domain // "?"): \(.record)"),
+        # Two records in state resolving to one address. Cloudflare rejects
+        # exact duplicates, so this needs drifted or double-imported state —
+        # but the resulting moved.tf would be invalid, so refuse to write it.
+        collisions: ($moves | group_by(.to) | map(select(length > 1))),
       }
   '
 )"
@@ -113,6 +118,12 @@ orphan_count="$(jq '.orphans | length' <<<"$report")"
 if [ "$orphan_count" -gt 0 ]; then
   log_warning "${orphan_count} record(s) in state have no counterpart in the configuration and will be destroyed:"
   jq -r '.orphans[] | "    \(.)"' <<<"$report" >&2
+fi
+
+if [ "$(jq '.collisions | length' <<<"$report")" -gt 0 ]; then
+  log_error "Several records in state resolve to the same target address; refusing to write ${MOVED_FILE#"${REPO_ROOT}/"}."
+  jq -r '.collisions[] | "    → \(.[0].to)\n" + (map("        from \(.from)") | join("\n"))' <<<"$report" >&2
+  error_exit 1 "Reconcile the duplicates in state first — moving both onto one address would lose a record."
 fi
 
 if [ "$count" -eq 0 ]; then
