@@ -274,6 +274,23 @@ settings = {
 }
 ```
 
+## Migrating state after a key change
+
+Record addresses contain a hash of the value, and TXT records live in their own resource. If an upgrade changes either, a plan reads as destroy-and-create for every record. That is harmless for an A record and an outage for MX and the SPF/DKIM/DMARC TXT records.
+
+`make moves zone=<zone>` closes that gap. It reads the current state, matches each record to its new address by what the record *is* — zone, type, name, content, priority — and writes `moved.tf` into the zone directory:
+
+```hcl
+moved {
+  from = module.dns_zone.cloudflare_dns_record.this["example.com__txt__@__spf__0"]
+  to   = module.dns_zone.cloudflare_dns_record.txt["example.com__txt__@__3d1c0d3023a0"]
+}
+```
+
+Commit that file, and the moves appear in the normal plan as `has moved to` with no destroys. Apply through the usual pipeline, then delete the file in a follow-up change — `moved` blocks are only needed once.
+
+Matching never reconstructs old key formats, because there have been several. A record in state with no counterpart in the configuration is reported separately: it is not moved, and it will be destroyed on apply.
+
 ## State operations (manual)
 
 This module does not delete a Cloudflare zone: `cloudflare_zone` has `prevent_destroy`, so removing a domain from `domains` or running `terraform destroy` will fail on apply. DNS has no undo. To drop a domain from state without touching Cloudflare, use `remove-domain` below (or `make remove`).

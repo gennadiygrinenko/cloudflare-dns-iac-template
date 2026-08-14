@@ -24,6 +24,8 @@ So the resource is split: `cloudflare_dns_record.this` applies content changes, 
 
 The value and priority are hashed (`sha256`, first 12 characters) instead. Domain, type, and name stay in clear text so plans remain readable — full hashes would trade a silent bug for an unreadable one, which is a bad deal when the plan output is the last review step before touching production DNS.
 
+Because the value is in the key, changing a value moves a record's address, and an upgrade that changes the scheme moves all of them. `make moves` generates `moved` blocks for that, matching state to configuration by what each record is rather than by recomputing the previous key format — there have been several formats, and a wrong reconstruction moves a record onto the wrong address. Declarative `moved` blocks are preferred over `terraform state mv` because the moves then appear in a plan, get reviewed in a pull request, and apply through the same pipeline as everything else, including from CI where nobody has local state access.
+
 Keys are also built in exactly one place. Previously eight separate map constructors each formatted their own key; a scheme that must be applied identically in eight places will eventually be applied differently in one of them.
 
 ## `prevent_destroy` on the zone
