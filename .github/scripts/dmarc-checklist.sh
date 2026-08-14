@@ -27,13 +27,20 @@ for zone in $(echo "${ZONES:-[]}" | jq -r '.[]'); do
   [ -d "$zone_dir" ] || continue
 
   log_info "Planning ${zone} for DMARC outputs..."
-  if ! (cd "$zone_dir" && terragrunt plan -out=tfplan.dmarc >/dev/null 2>&1); then
+  plan_file="${zone_dir}/tfplan.dmarc"
+  plan_log="$(mktemp)"
+
+  # Absolute -out: Terragrunt runs OpenTofu/Terraform inside .terragrunt-cache,
+  # so a relative path would save the plan there and leave nothing to read.
+  if ! (cd "$zone_dir" && terragrunt plan -out="$plan_file" --non-interactive) >"$plan_log" 2>&1 || [ ! -f "$plan_file" ]; then
     log_warning "Plan failed for ${zone} — skipping its checklist."
+    tail -15 "$plan_log" >&2
     continue
   fi
 
-  plan_json="$(cd "$zone_dir" && terraform show -json tfplan.dmarc)"
-  rm -f "${zone_dir}/tfplan.dmarc"
+  # --log-disable keeps Terragrunt's own log lines out of the JSON.
+  plan_json="$(cd "$zone_dir" && terragrunt run --log-disable -- show -json "$plan_file")"
+  rm -f "$plan_file"
 
   jq -r --arg zone "$zone" '
     (.planned_values.outputs.dmarc_external_authorizations_required.value // {})

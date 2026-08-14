@@ -32,9 +32,9 @@ It is aimed at whoever owns a handful to a few dozen domains: an in-house platfo
 
 | Tool | Version |
 |---|---|
-| Terraform | >= 1.9 |
-| Terragrunt | >= 0.67 |
-| Cloudflare provider | ~> 5.0 |
+| Terraform | >= 1.9 (CI runs 1.15.8) |
+| Terragrunt | >= 1.0 (CI runs 1.1.3) |
+| Cloudflare provider | ~> 5.0 (locked to 5.23.0) |
 | GitHub Actions | — |
 | Terraform Cloud (HCP) | free tier |
 
@@ -287,7 +287,7 @@ Use the **State Operations** workflow in the GitHub Actions UI:
 ## Local development
 
 ```bash
-# Install dependencies
+# Install dependencies (Terragrunt 1.0+ — the CLI renamed its flags in 1.0)
 brew install terraform terragrunt pre-commit tflint
 
 # Set environment variables
