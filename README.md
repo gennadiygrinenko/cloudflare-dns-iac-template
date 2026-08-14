@@ -229,6 +229,8 @@ settings = {
 
 ## State operations (manual)
 
+This module does not delete a Cloudflare zone: `cloudflare_zone` has `prevent_destroy`, so removing a domain from `domains` or running `terraform destroy` will fail on apply. DNS has no undo. To drop a domain from state without touching Cloudflare, use `remove-domain` below (or `make remove`).
+
 Use the **State Operations** workflow in the GitHub Actions UI:
 
 | Operation | Description |

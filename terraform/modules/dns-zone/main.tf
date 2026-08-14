@@ -185,6 +185,10 @@ resource "cloudflare_zone" "this" {
   type    = "full"
   # plan is read-only in provider v5 — set it in the Cloudflare dashboard.
   # The plan variable is still used here to enable/disable Pro+ resources.
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # -------------------------------------------------------------------
