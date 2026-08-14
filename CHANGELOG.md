@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+- Zone `.terraform.lock.hcl` files are committed and pin `cloudflare/cloudflare` 5.23.0 with hashes for linux and macOS. Previously they were gitignored, so every run resolved to whatever the newest 5.x was that day
+- `make lock` / `make lock-upgrade` to refresh or raise the pinned provider
+
 ### CI
 - Dependabot for GitHub Actions and the Terraform provider constraint, with action updates grouped into a single pull request
 - Changes to the shared Terragrunt HCL or to CI now validate every zone, not zero of them — an action bump used to pass checks that never ran the job using it

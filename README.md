@@ -62,6 +62,7 @@ It is aimed at whoever owns a handful to a few dozen domains: an in-house platfo
 │   ├── zones.hcl                 # Provider + module wiring (shared)
 │   └── zones/
 │       ├── acme/                 # Example zone
+│       │   ├── .terraform.lock.hcl
 │       │   ├── terragrunt.hcl
 │       │   └── variables.auto.tfvars
 │       └── example/              # Minimal zone example
@@ -302,6 +303,10 @@ make fmt
 make init  zone=acme
 make plan  zone=acme
 make apply zone=acme
+
+# Provider version
+make lock         zone=acme   # refresh lock hashes (all platforms)
+make lock-upgrade zone=acme   # move to the newest provider allowed by versions.tf
 
 # State operations
 make import zone=acme domain=acme-corp.io
