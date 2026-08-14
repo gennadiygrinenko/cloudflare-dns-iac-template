@@ -64,6 +64,10 @@ apply: .check-zone ## terragrunt apply for a zone
 validate: .check-zone ## terragrunt validate for a zone
 	cd $(ZONES_DIR)/$(zone) && terragrunt validate --non-interactive
 
+.PHONY: moves
+moves: .check-zone ## Generate moved.tf for records whose address changed
+	bash .github/scripts/plan-state-moves.sh $(zone)
+
 .PHONY: state-list
 state-list: .check-zone ## List all resources in state for a zone
 	cd $(ZONES_DIR)/$(zone) && terragrunt state list

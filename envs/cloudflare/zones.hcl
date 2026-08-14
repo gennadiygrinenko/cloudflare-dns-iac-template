@@ -64,6 +64,11 @@ generate "main" {
       value       = module.dns_zone.zone_name_servers
     }
 
+    output "dns_records" {
+      description = "Record inventory as the module resolved it, keyed by resource address key."
+      value       = module.dns_zone.dns_records
+    }
+
     output "dmarc_external_authorizations_required" {
       description = "DMARC report authorizations that must be published in zones this module does not manage."
       value       = module.dns_zone.dmarc_external_authorizations_required
