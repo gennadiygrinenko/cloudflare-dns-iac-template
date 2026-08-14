@@ -62,7 +62,7 @@ jobs:
         run: bash .github/scripts/install-terragrunt.sh "${{ env.TERRAGRUNT_VERSION }}"
 
       - name: Cache Terraform plugins
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ env.TF_PLUGIN_CACHE_DIR }}
           key: tf-plugins-${{ env.TERRAFORM_VERSION }}-${{ hashFiles('**/versions.tf') }}
