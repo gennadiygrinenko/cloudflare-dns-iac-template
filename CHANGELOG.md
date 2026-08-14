@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Changed
+- **Breaking for local use:** Terragrunt 0.67 → 1.1.3 and Terraform 1.9.8 → 1.15.8. Terragrunt 1.0 removed the `--terragrunt-` flag prefix and renamed `hclfmt` to `hcl fmt`, so every workflow, script, and Makefile target was migrated. Terragrunt < 1.0 no longer works with this repo
 - Zone `.terraform.lock.hcl` files are committed and pin `cloudflare/cloudflare` 5.23.0 with hashes for linux and macOS. Previously they were gitignored, so every run resolved to whatever the newest 5.x was that day
 - `make lock` / `make lock-upgrade` to refresh or raise the pinned provider
 

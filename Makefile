@@ -26,7 +26,7 @@ LOCK_PLATFORMS := -platform=linux_amd64 -platform=darwin_amd64 -platform=darwin_
 .PHONY: fmt
 fmt: ## Format all Terraform and Terragrunt files
 	terraform fmt -recursive terraform/
-	terragrunt hclfmt
+	terragrunt hcl fmt
 
 .PHONY: lint
 lint: ## Run tflint on the module
@@ -45,19 +45,19 @@ hooks-run: ## Run all pre-commit hooks on all files
 
 .PHONY: init
 init: .check-zone ## terragrunt init for a zone
-	cd $(ZONES_DIR)/$(zone) && terragrunt init --terragrunt-non-interactive
+	cd $(ZONES_DIR)/$(zone) && terragrunt init --non-interactive
 
 .PHONY: plan
 plan: .check-zone ## terragrunt plan for a zone
-	cd $(ZONES_DIR)/$(zone) && terragrunt plan --terragrunt-non-interactive
+	cd $(ZONES_DIR)/$(zone) && terragrunt plan --non-interactive
 
 .PHONY: apply
 apply: .check-zone ## terragrunt apply for a zone
-	cd $(ZONES_DIR)/$(zone) && terragrunt apply --terragrunt-non-interactive
+	cd $(ZONES_DIR)/$(zone) && terragrunt apply --non-interactive
 
 .PHONY: validate
 validate: .check-zone ## terragrunt validate for a zone
-	cd $(ZONES_DIR)/$(zone) && terragrunt validate --terragrunt-non-interactive
+	cd $(ZONES_DIR)/$(zone) && terragrunt validate --non-interactive
 
 .PHONY: state-list
 state-list: .check-zone ## List all resources in state for a zone
@@ -65,12 +65,12 @@ state-list: .check-zone ## List all resources in state for a zone
 
 .PHONY: lock
 lock: .check-zone ## Refresh .terraform.lock.hcl for a zone (all platforms)
-	cd $(ZONES_DIR)/$(zone) && terragrunt init -backend=false --terragrunt-non-interactive \
+	cd $(ZONES_DIR)/$(zone) && terragrunt init -backend=false --non-interactive \
 		&& terraform providers lock $(LOCK_PLATFORMS)
 
 .PHONY: lock-upgrade
 lock-upgrade: .check-zone ## Move a zone to the newest provider allowed by versions.tf
-	cd $(ZONES_DIR)/$(zone) && terragrunt init -backend=false -upgrade --terragrunt-non-interactive \
+	cd $(ZONES_DIR)/$(zone) && terragrunt init -backend=false -upgrade --non-interactive \
 		&& terraform providers lock $(LOCK_PLATFORMS)
 
 # ── State operations ─────────────────────────────────────────────────────────

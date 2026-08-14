@@ -28,7 +28,7 @@ get_zone_id() {
 tg_init() {
   local dir="$1"
   cd "$dir"
-  terragrunt init --terragrunt-non-interactive -reconfigure 2>&1 | tail -5
+  terragrunt init --non-interactive -reconfigure 2>&1 | tail -5
 }
 
 import_domain() {
@@ -46,7 +46,7 @@ import_domain() {
     log_warning "${DOMAIN} already in state — skipping zone import."
   else
     log_info "Importing zone ${DOMAIN}..."
-    terragrunt import --terragrunt-non-interactive "$RESOURCE" "$ZONE_ID"
+    terragrunt import --non-interactive "$RESOURCE" "$ZONE_ID"
     log_success "Zone imported."
   fi
 

@@ -38,8 +38,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  TERRAFORM_VERSION: "1.9.8"
-  TERRAGRUNT_VERSION: "0.67.0"
+  TERRAFORM_VERSION: "1.15.8"
+  TERRAGRUNT_VERSION: "1.1.3"
   TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
 
 jobs:
