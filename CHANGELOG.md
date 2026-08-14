@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- `terraform test` suite for the module: 15 plan-only cases covering record keying and collisions, the TXT/non-TXT split, `apex_ip` and Google Workspace expansion, SPF assembly, variable validation, and every branch of DMARC report authorization (internal mailbox, vendor mailbox, sibling managed zone, longest managed suffix with intermediate labels, the public-suffix safeguard, and the missing NS delegation warning)
+- `dns_records` output — the record inventory as the module resolved it, known at plan time
+- `make test`, and a `Module tests` job that gates `Validate complete`
+
 ### Changed
 - **Breaking for local use:** Terragrunt 0.67 → 1.1.3 and Terraform 1.9.8 → 1.15.8. Terragrunt 1.0 removed the `--terragrunt-` flag prefix and renamed `hclfmt` to `hcl fmt`, so every workflow, script, and Makefile target was migrated. Terragrunt < 1.0 no longer works with this repo
 - Zone `.terraform.lock.hcl` files are committed and pin `cloudflare/cloudflare` 5.23.0 with hashes for linux and macOS. Previously they were gitignored, so every run resolved to whatever the newest 5.x was that day

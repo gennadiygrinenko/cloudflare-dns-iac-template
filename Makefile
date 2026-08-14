@@ -33,6 +33,11 @@ lint: ## Run tflint on the module
 	tflint --init
 	tflint --recursive --format compact
 
+.PHONY: test
+test: ## Run module logic tests (plan-only, no credentials)
+	terraform -chdir=terraform/modules/dns-zone init -backend=false -input=false
+	terraform -chdir=terraform/modules/dns-zone test
+
 .PHONY: hooks
 hooks: ## Install pre-commit hooks
 	pre-commit install
