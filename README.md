@@ -71,7 +71,8 @@ It is aimed at whoever owns a handful to a few dozen domains: an in-house platfo
     ├── main.tf
     ├── variables.tf
     ├── outputs.tf
-    └── versions.tf
+    ├── versions.tf
+    └── tests/                    # terraform test — plan-only, no credentials
 ```
 
 ## Quick start
@@ -301,6 +302,9 @@ make hooks
 
 # Format all files
 make fmt
+
+# Run module logic tests (no Cloudflare account needed)
+make test
 
 # Work on a zone
 make init  zone=acme

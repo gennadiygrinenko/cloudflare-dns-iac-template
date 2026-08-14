@@ -31,6 +31,21 @@ output "dmarc_report_delegation_warnings" {
   }
 }
 
+output "dns_records" {
+  description = "Map of record key → the record as this module resolved it, before Cloudflare sees it. Known at plan time, so it is what you read when planning a `state mv` after a key change, or when checking what a shortcut expanded to."
+  value = {
+    for key, rec in local.all_records :
+    key => {
+      domain   = rec.domain
+      resource = rec.type == "TXT" ? "cloudflare_dns_record.txt" : "cloudflare_dns_record.this"
+      type     = rec.type
+      name     = rec.name
+      value    = rec.value
+      priority = rec.priority
+    }
+  }
+}
+
 output "dns_record_ids" {
   description = "Map of record key → Cloudflare DNS record ID."
   value = merge(

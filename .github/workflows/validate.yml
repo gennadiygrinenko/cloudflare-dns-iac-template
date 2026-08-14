@@ -42,6 +42,36 @@ jobs:
         id: detect
         run: bash .github/scripts/detect-zones.sh "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}"
 
+  # ── Module logic tests ───────────────────────────────────────────────────
+  # Plan-only runs against fixture inputs: no credentials, no API calls, and
+  # independent of which zones changed. terragrunt validate checks that the
+  # config parses; this checks that it means what the README says it means.
+  test:
+    name: Module tests
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Terraform ${{ env.TERRAFORM_VERSION }}
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Cache Terraform plugins
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: tf-plugins-${{ env.TERRAFORM_VERSION }}-${{ hashFiles('**/versions.tf') }}
+          restore-keys: tf-plugins-${{ env.TERRAFORM_VERSION }}-
+
+      - name: terraform test
+        run: |
+          mkdir -p "$TF_PLUGIN_CACHE_DIR"
+          terraform -chdir=terraform/modules/dns-zone init -backend=false -input=false
+          terraform -chdir=terraform/modules/dns-zone test
+
   # ── Validate changed zones in parallel ───────────────────────────────────
   validate:
     name: Validate / ${{ matrix.zone }}
@@ -165,18 +195,23 @@ jobs:
   # ── Summary gate — single status check for branch protection ─────────────
   validate-complete:
     name: Validate complete
-    needs: [detect-zones, validate]
+    needs: [detect-zones, test, validate]
     if: always()
     runs-on: ubuntu-24.04
     steps:
       - name: Check results
         run: |
           detect="${{ needs.detect-zones.result }}"
+          tests="${{ needs.test.result }}"
           validate="${{ needs.validate.result }}"
           any_changes="${{ needs.detect-zones.outputs.any_changes }}"
 
           if [ "$detect" != "success" ]; then
             echo "Detect zones failed (result: $detect)."
+            exit 1
+          fi
+          if [ "$tests" != "success" ]; then
+            echo "Module tests failed (result: $tests)."
             exit 1
           fi
           if [ "$any_changes" = "true" ] && [ "$validate" != "success" ]; then
