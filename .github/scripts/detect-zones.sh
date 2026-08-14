@@ -17,6 +17,12 @@ BASE_SHA="${1:-}"
 HEAD_SHA="${2:-}"
 ZONES_DIR="envs/cloudflare/zones"
 
+# Compact JSON array from newline-separated names. jq pretty-prints by default;
+# multiline values break GITHUB_OUTPUT (Invalid format '  "acme",').
+to_json_array() {
+  jq -cRn '[inputs | select(length > 0)]'
+}
+
 list_all_zones_with_domains() {
   for dir in "${ZONES_DIR}"/*/; do
     zone=$(basename "$dir")
@@ -30,14 +36,14 @@ if [ -n "$BASE_SHA" ] && [ -n "$HEAD_SHA" ]; then
   # PR mode: check if modules changed → validate all; otherwise only changed zones
   if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -q '^terraform/modules/'; then
     log_info "Terraform modules changed — validating all zones."
-    ZONES=$(list_all_zones_with_domains | jq -Rn '[inputs]')
+    ZONES=$(list_all_zones_with_domains | to_json_array)
   else
     ZONES=$(
       git diff --name-only "$BASE_SHA" "$HEAD_SHA" \
-        | grep "^${ZONES_DIR}/" \
+        | { grep "^${ZONES_DIR}/" || true; } \
         | sed "s|^${ZONES_DIR}/\([^/]*\)/.*|\1|" \
         | sort -u \
-        | jq -Rn '[inputs]'
+        | to_json_array
     )
   fi
 
@@ -48,8 +54,12 @@ if [ -n "$BASE_SHA" ] && [ -n "$HEAD_SHA" ]; then
   fi
 else
   # Push-to-main mode: all zones with domains
-  ZONES=$(list_all_zones_with_domains | jq -Rn '[inputs]')
+  ZONES=$(list_all_zones_with_domains | to_json_array)
 fi
 
 log_info "Zones detected: $ZONES"
-echo "zones=$ZONES" >> "$GITHUB_OUTPUT"
+{
+  echo "zones<<EOF"
+  echo "$ZONES"
+  echo "EOF"
+} >> "$GITHUB_OUTPUT"
