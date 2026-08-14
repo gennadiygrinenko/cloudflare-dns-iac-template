@@ -12,6 +12,12 @@ updates:
     labels:
       - dependencies
       - ci
+    # One PR for all actions. Separate PRs mean each is reviewed against a CI
+    # run that mostly does not exercise it, five times over.
+    groups:
+      github-actions:
+        patterns:
+          - "*"
 
   # Cloudflare provider constraint in the module.
   - package-ecosystem: terraform

@@ -32,10 +32,15 @@ list_all_zones_with_domains() {
   done
 }
 
+# Paths that affect every zone: the module itself, the shared Terragrunt HCL,
+# and the CI that runs them. A change here validated against zero zones tells
+# you nothing, which is how an action bump can look tested without being run.
+SHARED_PATHS='^(terraform/modules/|envs/cloudflare/[^/]+\.hcl|\.github/(workflows|scripts)/)'
+
 if [ -n "$BASE_SHA" ] && [ -n "$HEAD_SHA" ]; then
-  # PR mode: check if modules changed → validate all; otherwise only changed zones
-  if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -q '^terraform/modules/'; then
-    log_info "Terraform modules changed — validating all zones."
+  # PR mode: shared change → validate all zones; otherwise only changed zones
+  if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE "$SHARED_PATHS"; then
+    log_info "Shared module, config, or CI changed — validating all zones."
     ZONES=$(list_all_zones_with_domains | to_json_array)
   else
     ZONES=$(

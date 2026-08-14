@@ -7,7 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### CI
-- Dependabot for GitHub Actions and the Terraform provider constraint
+- Dependabot for GitHub Actions and the Terraform provider constraint, with action updates grouped into a single pull request
+- Changes to the shared Terragrunt HCL or to CI now validate every zone, not zero of them — an action bump used to pass checks that never ran the job using it
 - `tflint` version pinned instead of tracking `latest`
 - Trivy misconfiguration scan in a separate `Security` workflow, reporting to code scanning rather than blocking pull requests
 
