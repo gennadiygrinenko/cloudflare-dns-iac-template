@@ -6,7 +6,9 @@ on:
 
 permissions:
   contents: read
-  id-token: write # OIDC token for Terraform Cloud / GCP
+  # Reserved for Terraform Cloud OIDC. Today both TFC and Cloudflare are
+  # authenticated with static scoped tokens — see docs/DESIGN_DECISIONS.md.
+  id-token: write
 
 env:
   TERRAFORM_VERSION: "1.9.8"
@@ -14,9 +16,49 @@ env:
   TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
 
 jobs:
+  # ── Refuse to pretend: a fresh fork has no TFC org and no tokens ──────────
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-24.04
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+
+    steps:
+      - name: Check deployment credentials
+        id: check
+        env:
+          TF_CLOUD_ORGANIZATION: ${{ vars.TF_CLOUD_ORGANIZATION }}
+          HAS_TF_TOKEN: ${{ secrets.TF_API_TOKEN != '' }}
+          HAS_CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          missing=""
+          [ -n "$TF_CLOUD_ORGANIZATION" ] || missing="${missing} vars.TF_CLOUD_ORGANIZATION"
+          [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || missing="${missing} vars.CLOUDFLARE_ACCOUNT_ID"
+          [ "$HAS_TF_TOKEN" = "true" ] || missing="${missing} secrets.TF_API_TOKEN"
+          [ "$HAS_CF_TOKEN" = "true" ] || missing="${missing} secrets.CLOUDFLARE_API_TOKEN"
+
+          if [ -n "$missing" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Deploy skipped — not configured"
+              echo
+              echo "Missing:"
+              for item in $missing; do echo "- \`${item}\`"; done
+              echo
+              echo "This is expected in a fresh fork. See the README for setup;"
+              echo "plan and apply stay skipped until all four are present."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "### Deploy configured — planning all zones" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   # ── Discover zones that have domains configured ───────────────────────────
   detect-zones:
     name: Detect zones
+    needs: preflight
+    if: needs.preflight.outputs.configured == 'true'
     runs-on: ubuntu-24.04
     outputs:
       zones: ${{ steps.detect.outputs.zones }}
@@ -69,29 +111,51 @@ jobs:
           mkdir -p "$TF_PLUGIN_CACHE_DIR"
           log_section "Plan: ${{ matrix.zone }}"
           cd "envs/cloudflare/zones/${{ matrix.zone }}"
-          terragrunt plan -out=tfplan --terragrunt-non-interactive 2>&1 | tee /tmp/plan.log
+
+          # -detailed-exitcode: 0 = no changes, 2 = changes, anything else is a
+          # real failure. Grepping the log for "No changes." cannot tell an empty
+          # plan from a broken one, and the pipe to tee hides the exit code.
+          set +e
+          terragrunt plan -out=tfplan -detailed-exitcode --terragrunt-non-interactive 2>&1 | tee /tmp/plan.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          set -e
 
           echo "### Plan: ${{ matrix.zone }}" >> "$GITHUB_STEP_SUMMARY"
-          if grep -q "No changes." /tmp/plan.log; then
-            log_info "No changes detected."
-            echo "no_changes=true" >> "$GITHUB_OUTPUT"
-            echo "⬛ No changes." >> "$GITHUB_STEP_SUMMARY"
-          else
-            log_success "Changes detected — plan saved."
-            echo "no_changes=false" >> "$GITHUB_OUTPUT"
-            echo '```hcl' >> "$GITHUB_STEP_SUMMARY"
-            grep -A 999 "Terraform will perform" /tmp/plan.log | head -60 >> "$GITHUB_STEP_SUMMARY" || true
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
-          fi
+          case "$EXIT_CODE" in
+            0)
+              log_info "No changes detected."
+              # Marker so a missing artifact downstream means a broken upload,
+              # not an empty plan.
+              rm -f tfplan && touch NO_CHANGES
+              echo "no_changes=true" >> "$GITHUB_OUTPUT"
+              echo "⬛ No changes." >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            2)
+              log_success "Changes detected — plan saved."
+              echo "no_changes=false" >> "$GITHUB_OUTPUT"
+              echo '```hcl' >> "$GITHUB_STEP_SUMMARY"
+              grep -A 999 "Terraform will perform" /tmp/plan.log | head -60 >> "$GITHUB_STEP_SUMMARY" || true
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            *)
+              log_error "Plan failed for ${{ matrix.zone }} (exit ${EXIT_CODE})."
+              echo "❌ Plan failed." >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              tail -40 /tmp/plan.log >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              exit "$EXIT_CODE"
+              ;;
+          esac
 
       - name: Upload plan artifact
-        if: steps.plan.outputs.no_changes == 'false'
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-${{ matrix.zone }}-${{ github.run_id }}
-          path: envs/cloudflare/zones/${{ matrix.zone }}/tfplan
+          path: |
+            envs/cloudflare/zones/${{ matrix.zone }}/tfplan
+            envs/cloudflare/zones/${{ matrix.zone }}/NO_CHANGES
           retention-days: 7
-          if-no-files-found: ignore
+          if-no-files-found: error
 
   # ── Apply: sequential, manual approval via GitHub Environment ────────────
   apply:
@@ -129,12 +193,13 @@ jobs:
           key: tf-plugins-${{ env.TERRAFORM_VERSION }}-${{ hashFiles('**/versions.tf') }}
           restore-keys: tf-plugins-${{ env.TERRAFORM_VERSION }}-
 
+      # No continue-on-error: the plan job always uploads either a plan or a
+      # NO_CHANGES marker, so a failed download is a real failure.
       - name: Download plan artifact
         uses: actions/download-artifact@v4
         with:
           name: tfplan-${{ matrix.zone }}-${{ github.run_id }}
           path: envs/cloudflare/zones/${{ matrix.zone }}/
-        continue-on-error: true # zone may have no changes
 
       - name: Apply — ${{ matrix.zone }}
         env:
@@ -142,12 +207,20 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           TF_CLOUD_ORGANIZATION: ${{ vars.TF_CLOUD_ORGANIZATION }}
         run: |
+          set -o pipefail
           source .github/scripts/common.sh
           log_section "Apply: ${{ matrix.zone }}"
           ZONE_DIR="envs/cloudflare/zones/${{ matrix.zone }}"
-          if [ ! -f "${ZONE_DIR}/tfplan" ]; then
-            log_info "No plan artifact for ${{ matrix.zone }} — no changes, skipping."
+
+          if [ -f "${ZONE_DIR}/NO_CHANGES" ]; then
+            log_info "Plan reported no changes for ${{ matrix.zone }} — nothing to apply."
+            echo "### ${{ matrix.zone }}: no changes ⬛" >> "$GITHUB_STEP_SUMMARY"
             exit 0
+          fi
+
+          if [ ! -f "${ZONE_DIR}/tfplan" ]; then
+            log_error "Artifact for ${{ matrix.zone }} has neither a plan nor a no-changes marker."
+            exit 1
           fi
 
           cd "$ZONE_DIR"

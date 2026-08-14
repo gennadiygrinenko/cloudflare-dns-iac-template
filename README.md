@@ -98,6 +98,8 @@ In your GitHub repository → **Settings → Secrets and variables → Actions**
 | `CLOUDFLARE_ACCOUNT_ID` | Variable | Your Cloudflare account ID (32-char hex) |
 | `TF_CLOUD_ORGANIZATION` | Variable | Your Terraform Cloud organization name |
 
+Until all four exist, the Deploy workflow stops at its preflight job and says so in the run summary: plan and apply are skipped rather than run against nothing. Validate does not need any of them — pull requests work in a fresh fork.
+
 ### 4. Set up the production environment
 
 In **Settings → Environments → New environment** → name it `production`:

@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### CI
+- **Fixed:** Deploy reported success when `terragrunt plan` failed. The pipe to `tee` discarded the exit code, "no changes" was inferred by grepping the log, and Apply treated a missing artifact as an empty plan. Plan now uses `-detailed-exitcode` with `PIPESTATUS`, and always uploads either a plan or a `NO_CHANGES` marker, so a missing artifact is a failure
+- Deploy preflight job: without `TF_CLOUD_ORGANIZATION`, `CLOUDFLARE_ACCOUNT_ID`, `TF_API_TOKEN`, and `CLOUDFLARE_API_TOKEN`, plan and apply are skipped with a summary explaining why
 - Dependabot for GitHub Actions and the Terraform provider constraint, with action updates grouped into a single pull request
 - Changes to the shared Terragrunt HCL or to CI now validate every zone, not zero of them — an action bump used to pass checks that never ran the job using it
 - `tflint` version pinned instead of tracking `latest`
