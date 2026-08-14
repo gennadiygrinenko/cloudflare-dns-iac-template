@@ -90,3 +90,9 @@ Configuration syntax is unchanged — existing `variables.auto.tfvars` files kee
 - Terraform Cloud backend with remote state
 - Pre-commit hooks: `terraform_fmt`, `terraform_validate`, `terraform_tflint`, `terragrunt_fmt`, shellcheck
 - `CODEOWNERS` for required reviews on infrastructure changes
+
+[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v1.2.0...v2.0.0
+[1.2.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/releases/tag/v1.0.0
