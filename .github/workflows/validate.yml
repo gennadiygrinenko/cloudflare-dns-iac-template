@@ -122,15 +122,22 @@ jobs:
   # ── Summary gate — single status check for branch protection ─────────────
   validate-complete:
     name: Validate complete
-    needs: validate
+    needs: [detect-zones, validate]
     if: always()
     runs-on: ubuntu-24.04
     steps:
       - name: Check results
         run: |
-          source .github/scripts/common.sh
-          if [ "${{ needs.validate.result }}" = "failure" ]; then
-            log_error "One or more zones failed validation."
+          detect="${{ needs.detect-zones.result }}"
+          validate="${{ needs.validate.result }}"
+          any_changes="${{ needs.detect-zones.outputs.any_changes }}"
+
+          if [ "$detect" != "success" ]; then
+            echo "Detect zones failed (result: $detect)."
             exit 1
           fi
-          log_success "All zones validated successfully."
+          if [ "$any_changes" = "true" ] && [ "$validate" != "success" ]; then
+            echo "One or more zones failed validation (result: $validate)."
+            exit 1
+          fi
+          echo "All zones validated successfully."
