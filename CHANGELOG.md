@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- `dmarc_rua` — aggregate report mailbox, defaulting to `dmarc@<domain>`; `mailto:` prefix and case are normalized
+- `spf_policy` (`~all` | `-all` | `?all`) with validation
+- Automatic `_report._dmarc` authorization records when the rua mailbox lives in another zone managed by the same module (RFC 7489 §7.1), placed in the receiving zone with intermediate labels preserved
+- `dmarc_external_authorizations_required` output — records that must be published in zones this module does not manage, surfaced as a PR comment on same-repo pull requests
+- `dmarc_report_delegation_warnings` output — managed child zone with no NS delegation from its managed parent
+
 ### Fixed
 - Scope `ignore_changes` to TXT records. Auto-generated GSC, DKIM, SPF, and DMARC records previously kept a stable key, so content updates were silently ignored.
 - Derive `for_each` keys from a hash of value + priority so `replace(".", "_")` cannot collide two records into one map entry.

@@ -52,9 +52,96 @@ locals {
     { name = "calendar", value = "ghs.googlehosted.com" },
   ]
 
+  # ------------------------------------------------------------------
+  # DMARC aggregate reporting
+  # ------------------------------------------------------------------
+  gws_domains = { for domain, cfg in var.domains : domain => cfg if cfg.google_workspace }
+
+  # Users write "Dmarc@Example.com" or "mailto:dmarc@example.com".
+  dmarc_rua_address = {
+    for domain, cfg in local.gws_domains :
+    domain => trimspace(trimprefix(lower(trimspace(coalesce(cfg.dmarc_rua, "dmarc@${domain}"))), "mailto:"))
+  }
+
+  dmarc_rua_domain = {
+    for domain, address in local.dmarc_rua_address :
+    domain => reverse(split("@", address))[0]
+  }
+
+  # RFC 7489 §7.1 requires authorization only when the report mailbox sits in a
+  # different Organizational Domain. Org-domains come from the Public Suffix
+  # List, which Terraform cannot read, so nesting is used as an approximation.
+  # The parent case also demands that the parent be a zone we manage, otherwise
+  # "shop.co.uk" -> "dmarc@co.uk" would look internal. Limits are in the README.
+  dmarc_rua_internal = {
+    for domain, rua in local.dmarc_rua_domain :
+    domain => (
+      rua == domain ||
+      endswith(rua, ".${domain}") ||
+      (endswith(domain, ".${rua}") && contains(keys(var.domains), rua))
+    )
+  }
+
+  # Zones in this module that could hold the authorization record. The longest
+  # match wins: a delegated child zone is authoritative over its parent.
+  dmarc_rua_zone_candidates = {
+    for domain, rua in local.dmarc_rua_domain :
+    domain => [for zone in keys(var.domains) : zone if rua == zone || endswith(rua, ".${zone}")]
+  }
+
+  dmarc_rua_zone = {
+    for domain, candidates in local.dmarc_rua_zone_candidates :
+    domain => length(candidates) == 0 ? null : [
+      for zone in candidates : zone if length(zone) == max([for c in candidates : length(c)]...)
+    ][0]
+  }
+
+  # "<publisher>._report._dmarc.<rua-labels>" published in the zone that owns
+  # the mailbox — never in the publishing zone, which authorizes nobody.
+  dmarc_report_records = [
+    for domain, rua in local.dmarc_rua_domain : {
+      domain = local.dmarc_rua_zone[domain]
+      type   = "TXT"
+      name = rua == local.dmarc_rua_zone[domain] ? "${domain}._report._dmarc" : (
+        "${domain}._report._dmarc.${trimsuffix(rua, ".${local.dmarc_rua_zone[domain]}")}"
+      )
+      value    = "v=DMARC1"
+      ttl      = 1
+      proxied  = false
+      priority = null
+      comment  = "DMARC report authorization for ${domain} (auto)"
+    }
+    if !local.dmarc_rua_internal[domain] && local.dmarc_rua_zone[domain] != null
+  ]
+
+  # Parent of the zone chosen above, when we manage it too.
+  dmarc_report_parent_candidates = {
+    for domain, zone in local.dmarc_rua_zone :
+    domain => zone == null ? [] : [
+      for parent in keys(var.domains) : parent if zone != parent && endswith(zone, ".${parent}")
+    ]
+  }
+
+  dmarc_report_parent = {
+    for domain, candidates in local.dmarc_report_parent_candidates :
+    domain => length(candidates) == 0 ? null : [
+      for parent in candidates : parent if length(parent) == max([for c in candidates : length(c)]...)
+    ][0]
+  }
+
+  # A child zone only answers if the parent delegates to it. Delegation set up
+  # outside this module is invisible here, so only managed parents are checked.
+  dmarc_report_delegated = {
+    for domain, parent in local.dmarc_report_parent :
+    domain => parent == null ? true : contains([
+      for r in var.domains[parent].records :
+      lower(trimsuffix(trimsuffix(r.name, "."), ".${parent}")) if upper(r.type) == "NS"
+    ], trimsuffix(local.dmarc_rua_zone[domain], ".${parent}"))
+  }
+
   # Flattened record objects (no keys). Keyed once below so a collision
   # cannot silently drop a record in one of several map constructors.
-  all_records_list = flatten([
+  all_records_list = concat(local.dmarc_report_records, flatten([
     for domain, cfg in var.domains : concat(
       [for r in cfg.records : merge(r, { domain = domain })],
       cfg.apex_ip != null ? [
@@ -129,10 +216,14 @@ locals {
       ] : [],
       cfg.google_workspace ? [
         {
-          domain   = domain
-          type     = "TXT"
-          name     = "@"
-          value    = "v=spf1 include:_spf.google.com ${join(" ", [for inc in cfg.spf_includes : "include:${inc}"])} ~all"
+          domain = domain
+          type   = "TXT"
+          name   = "@"
+          value = join(" ", concat(
+            ["v=spf1", "include:_spf.google.com"],
+            [for inc in cfg.spf_includes : "include:${inc}"],
+            [cfg.spf_policy],
+          ))
           ttl      = 1
           proxied  = false
           priority = null
@@ -144,7 +235,7 @@ locals {
           domain   = domain
           type     = "TXT"
           name     = "_dmarc"
-          value    = "v=DMARC1; p=${cfg.dmarc_policy}; rua=mailto:dmarc@${domain}"
+          value    = "v=DMARC1; p=${cfg.dmarc_policy}; rua=mailto:${local.dmarc_rua_address[domain]}"
           ttl      = 1
           proxied  = false
           priority = null
@@ -152,7 +243,7 @@ locals {
         },
       ] : [],
     )
-  ])
+  ]))
 
   # Prefix stays readable; payload is hashed so replace(".", "_") cannot
   # collide (e.g. 1.2.3.4 vs 1_2_3_4). Changing value or priority replaces

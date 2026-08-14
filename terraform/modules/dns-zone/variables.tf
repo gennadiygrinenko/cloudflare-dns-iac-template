@@ -54,9 +54,17 @@ variable "domains" {
     # Extra SPF includes (appended when google_workspace = true)
     spf_includes = optional(list(string), [])
 
+    # SPF enforcement: ~all (softfail) | -all (fail) | ?all (neutral)
+    spf_policy = optional(string, "~all")
+
     # DMARC policy: none (monitor) → quarantine → reject
     # Recommended: start with "none", move to "reject" once DKIM is set up
     dmarc_policy = optional(string, "none")
+
+    # Where aggregate DMARC reports are sent. Defaults to dmarc@<domain>.
+    # A mailbox outside this domain needs an authorization record in the
+    # receiving zone (RFC 7489 §7.1) — see the README.
+    dmarc_rua = optional(string, null)
 
     # Google Search Console domain verification token (the part after "google-site-verification=")
     google_site_verification = optional(string, null)
@@ -107,5 +115,21 @@ variable "domains" {
       contains(["none", "quarantine", "reject"], cfg.dmarc_policy)
     ])
     error_message = "dmarc_policy must be one of: none, quarantine, reject."
+  }
+
+  validation {
+    condition = alltrue([
+      for name, cfg in var.domains :
+      contains(["~all", "-all", "?all"], cfg.spf_policy)
+    ])
+    error_message = "spf_policy must be one of: ~all, -all, ?all."
+  }
+
+  validation {
+    condition = alltrue([
+      for name, cfg in var.domains :
+      cfg.dmarc_rua == null || can(regex("^[^@[:space:]]+@[^@[:space:]]+\\.[^@[:space:]]+$", trimspace(trimprefix(lower(trimspace(coalesce(cfg.dmarc_rua, ""))), "mailto:"))))
+    ])
+    error_message = "dmarc_rua must be a single email address, with or without the mailto: prefix."
   }
 }
