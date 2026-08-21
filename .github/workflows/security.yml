@@ -52,7 +52,7 @@ jobs:
           skip-dirs: "**/.terragrunt-cache"
 
       - name: Upload results to code scanning
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         continue-on-error: true
         with:
           sarif_file: trivy.sarif
