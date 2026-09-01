@@ -14,8 +14,20 @@ ZONE="${2:?zone required}"
 DOMAIN="${3:?domain required}"
 FROM_ZONE="${4:-}"
 
-ZONES_DIR="envs/cloudflare/zones"
+# Absolute, because tg_init leaves the process inside a zone directory: with a
+# relative path, move-domain resolved the target against the source directory
+# and failed after it had already emptied the source state.
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+ZONES_DIR="${REPO_ROOT}/envs/cloudflare/zones"
 ZONE_DIR="${ZONES_DIR}/${ZONE}"
+
+# Resources for one domain carry two key shapes: ["domain"] for the zone, its
+# settings and rulesets, and ["domain__type__name__hash"] for DNS records.
+# Anchor on the opening bracket and quote, then accept either ending.
+domain_resources() {
+  local escaped="${DOMAIN//./\\.}"
+  terragrunt state list 2>/dev/null | grep -E "\[\"${escaped}(\"|__)" || true
+}
 
 get_zone_id() {
   local domain="$1"
@@ -59,7 +71,7 @@ remove_domain() {
 
   tg_init "$ZONE_DIR"
 
-  RESOURCES=$(terragrunt state list 2>/dev/null | grep "\"${DOMAIN}\"" || true)
+  RESOURCES=$(domain_resources)
   if [ -z "$RESOURCES" ]; then
     log_warning "${DOMAIN} not found in state — nothing to remove."
     exit 0
@@ -87,7 +99,7 @@ move_domain() {
 
   log_info "Removing ${DOMAIN} from ${FROM_ZONE} state..."
   tg_init "$FROM_DIR"
-  RESOURCES=$(terragrunt state list 2>/dev/null | grep "\"${DOMAIN}\"" || true)
+  RESOURCES=$(domain_resources)
   if [ -n "$RESOURCES" ]; then
     echo "$RESOURCES" | while IFS= read -r resource; do
       [ -z "$resource" ] && continue

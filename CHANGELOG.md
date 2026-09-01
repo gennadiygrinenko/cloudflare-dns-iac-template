@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`move-domain` tore state in half.** `ZONES_DIR` was relative and `tg_init` leaves the process inside a zone directory, so after the source state had been emptied the target directory no longer resolved: the operation aborted with `Zone directory not found`, having removed the domain from one state and imported it into neither. Paths are absolute now
+- **`remove-domain` left every DNS record behind.** It matched state addresses on `"domain"`, which covers the zone, its fifteen settings and its rulesets — but records are keyed `domain__type__name__hash`, so none of them matched. The operation removed part of a domain and reported that it had removed all of it. Both key shapes are matched now
+- Both faults were in operations that touch state, have no undo, and had never been run
+
+### Added
+
+- 11 cases covering the state operation routing, with `terragrunt` and `curl` stubbed and per-zone state that `state rm` actually mutates — a shared list would have let the broken move look correct
+
 ## [2.5.0] - 2026-09-02
 
 The deploy path, examined. Its decision logic moved somewhere a test can reach it and got eleven cases; what those cases cannot reach is now written down rather than implied to work.
