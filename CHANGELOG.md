@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-09-02
+
+The two operations nobody had ever run turned out to be broken, and the setup steps nobody could test were consolidated behind something that is tested. Both halves of the same observation: code that no pull request exercises does not stay correct by being read.
+
 ### Changed
 
 - Terraform and Terragrunt are pinned in one place. They were declared as `env` in four workflows and installed by thirteen hand-written steps; a `setup-iac` composite action now owns both versions as input defaults and does the install and the plugin cache. Beyond removing the duplication, this shrinks what cannot be tested: seven of those steps lived in Deploy and State Operations, which no pull request exercises, and they are now seven `uses:` lines calling an action that Validate runs three times on every pull request
@@ -173,7 +177,8 @@ Configuration syntax is unchanged — existing `variables.auto.tfvars` files kee
 - Pre-commit hooks: `terraform_fmt`, `terraform_validate`, `terraform_tflint`, `terragrunt_fmt`, shellcheck
 - `CODEOWNERS` for required reviews on infrastructure changes
 
-[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.5.0...HEAD
+[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.6.0...HEAD
+[2.6.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.2.0...v2.3.0
