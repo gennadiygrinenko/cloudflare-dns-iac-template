@@ -75,12 +75,12 @@ state-list: .check-zone ## List all resources in state for a zone
 .PHONY: lock
 lock: .check-zone ## Refresh .terraform.lock.hcl for a zone (all platforms)
 	cd $(ZONES_DIR)/$(zone) && terragrunt init -backend=false --non-interactive \
-		&& terraform providers lock $(LOCK_PLATFORMS)
+		&& terragrunt run -- providers lock $(LOCK_PLATFORMS)
 
 .PHONY: lock-upgrade
 lock-upgrade: .check-zone ## Move a zone to the newest provider allowed by versions.tf
 	cd $(ZONES_DIR)/$(zone) && terragrunt init -backend=false -upgrade --non-interactive \
-		&& terraform providers lock $(LOCK_PLATFORMS)
+		&& terragrunt run -- providers lock $(LOCK_PLATFORMS)
 
 # ── State operations ─────────────────────────────────────────────────────────
 
