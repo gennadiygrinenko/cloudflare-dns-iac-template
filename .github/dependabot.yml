@@ -29,3 +29,23 @@ updates:
     labels:
       - dependencies
       - terraform
+
+  # Pre-commit hook revisions. Neither ecosystem above sees them, so these were
+  # the only pinned versions in the repo with nothing watching them at all --
+  # the hooks would go on running an old shellcheck or tflint wrapper
+  # indefinitely, and the first sign would be a lint rule that stopped firing.
+  # Grouped like the actions: no CI job runs pre-commit, and .pre-commit-config
+  # is outside Validate's path filter, so three separate pull requests would be
+  # three reviews of a diff nothing exercises.
+  - package-ecosystem: pre-commit
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - dependencies
+    groups:
+      pre-commit:
+        patterns:
+          - "*"
