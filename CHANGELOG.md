@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-09-02
+
+The deploy path, examined. Its decision logic moved somewhere a test can reach it and got eleven cases; what those cases cannot reach is now written down rather than implied to work.
+
 ### Added
 
 - The plan and apply decision logic is now testable, and tested. It moved out of `deploy.yml` into `plan-zone.sh` and `apply-zone.sh`, and 11 cases exercise it with a stubbed Terragrunt: exit codes 0, 2 and 1, the `NO_CHANGES` marker, stale artifacts from an earlier run, and an apply that finds neither file. That last case is the fault this pipeline actually shipped — a missing artifact read as "no changes", reporting success while the plan had failed outright. The faults were all shell logic, so none of them need a Cloudflare account to reproduce; none were reachable by a test while the logic lived inside the workflow
@@ -154,7 +158,8 @@ Configuration syntax is unchanged — existing `variables.auto.tfvars` files kee
 - Pre-commit hooks: `terraform_fmt`, `terraform_validate`, `terraform_tflint`, `terragrunt_fmt`, shellcheck
 - `CODEOWNERS` for required reviews on infrastructure changes
 
-[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.4.0...HEAD
+[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.5.0...HEAD
+[2.5.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.1.0...v2.2.0
