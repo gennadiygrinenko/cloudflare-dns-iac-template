@@ -25,6 +25,18 @@ env:
   TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
 
 jobs:
+  # ── Tool version pins ────────────────────────────────────────────────────
+  # The pins below are plain env strings repeated across four workflows, which
+  # Dependabot cannot see and no job notices when a bump misses one of them.
+  version-pins:
+    name: Version pins
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check version pins agree
+        run: bash .github/scripts/check-version-pins.sh
+
   # ── Detect which zones actually changed ──────────────────────────────────
   detect-zones:
     name: Detect changed zones
@@ -195,17 +207,22 @@ jobs:
   # ── Summary gate — single status check for branch protection ─────────────
   validate-complete:
     name: Validate complete
-    needs: [detect-zones, test, validate]
+    needs: [version-pins, detect-zones, test, validate]
     if: always()
     runs-on: ubuntu-24.04
     steps:
       - name: Check results
         run: |
+          pins="${{ needs.version-pins.result }}"
           detect="${{ needs.detect-zones.result }}"
           tests="${{ needs.test.result }}"
           validate="${{ needs.validate.result }}"
           any_changes="${{ needs.detect-zones.outputs.any_changes }}"
 
+          if [ "$pins" != "success" ]; then
+            echo "Version pins disagree between workflows (result: $pins)."
+            exit 1
+          fi
           if [ "$detect" != "success" ]; then
             echo "Detect zones failed (result: $detect)."
             exit 1

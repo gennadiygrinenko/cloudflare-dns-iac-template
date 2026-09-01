@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `Version pins` check in Validate — `TERRAFORM_VERSION` and `TERRAGRUNT_VERSION` are plain env strings repeated across four workflows, which Dependabot cannot see and no job noticed disagreeing. The check compares every `*_VERSION` pin across the workflows and fails when one of them is out of step, naming the file and line
+
+### Changed
+
+- The README stack table no longer restates the exact versions CI pins; it names where they live. Restating a version that another file owns is what left the table claiming a provider build that had not been locked for a month
+
 ## [2.1.0] - 2026-09-01
 
 Nothing about the configuration changes: `variables.auto.tfvars` and the module interface are the same as 2.0.0. What is new is a supported way through the 2.0.0 state migration, and a provider lock refresh that actually works — it had been failing on every run since the first one, in three separate ways, without anyone being told.
