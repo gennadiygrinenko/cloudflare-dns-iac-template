@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `Tool versions` workflow — monthly, it moves `TERRAFORM_VERSION`, `TERRAGRUNT_VERSION`, `TFLINT_VERSION`, `TRIVY_VERSION` and `PRE_COMMIT_VERSION` to the newest release each project has published, and opens a pull request when anything moved. These are plain env strings, so no Dependabot ecosystem reaches them; the `Version pins` check keeps the workflows agreeing with each other but cannot know a newer release exists. Each pin keeps its own prefix style, the module tests and every zone are run against the new versions inside the workflow, and the run fails rather than committing if the rewrite left the pins disagreeing
+
 ## [2.3.0] - 2026-09-01
 
 Enforcement, not new rules. The pre-commit hooks had been configured since 1.0 and run by nobody but whoever remembered `make hooks`; now they run where they cannot be skipped, and Validate can actually see the files they guard.
