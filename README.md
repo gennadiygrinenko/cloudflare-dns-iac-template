@@ -55,7 +55,7 @@ It is aimed at whoever owns a handful to a few dozen domains: an in-house platfo
 │   │   ├── refresh-locks.sh      # Move zone locks to the newest allowed provider
 │   │   ├── refresh-tools.sh      # Move tool pins to the newest releases
 │   │   ├── state-ops.sh          # Import / remove / move domain state ops
-│   │   └── tests/                # Shell tests for the deploy decision logic
+│   │   └── tests/                # Shell tests for the deploy and state-op logic
 │   ├── dependabot.yml            # Action, provider and pre-commit updates
 │   └── workflows/
 │       ├── validate.yml          # PR: validate changed zones in parallel
