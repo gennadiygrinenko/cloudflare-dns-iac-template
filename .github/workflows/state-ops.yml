@@ -39,7 +39,7 @@ concurrency:
 
 env:
   TERRAFORM_VERSION: "1.15.8"
-  TERRAGRUNT_VERSION: "1.1.3"
+  TERRAGRUNT_VERSION: "1.1.4"
   TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
 
 jobs:
