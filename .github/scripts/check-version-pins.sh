@@ -14,6 +14,18 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
 WORKFLOWS="$(cd "${SCRIPT_DIR}/../workflows" && pwd)"
+SETUP_ACTION="$(cd "${SCRIPT_DIR}/../actions/setup-iac" && pwd)/action.yml"
+
+# Terraform and Terragrunt are declared once, as input defaults on the setup
+# action. A workflow that pins them again would win for its own jobs and drift
+# away silently, so reintroducing the env key is itself the failure.
+for key in TERRAFORM_VERSION TERRAGRUNT_VERSION; do
+  if grep -qE "^  ${key}:" "${WORKFLOWS}"/*.yml; then
+    log_error "${key} is pinned in a workflow; it belongs to ${SETUP_ACTION##*/.github/} alone:"
+    grep -nE "^  ${key}:" "${WORKFLOWS}"/*.yml | sed 's|.*/workflows/|    |' >&2
+    exit 1
+  fi
+done
 
 # Workflow-level env only: keys are indented exactly two spaces.
 keys="$(grep -hoE '^  [A-Z][A-Z0-9_]*_VERSION:' "${WORKFLOWS}"/*.yml | tr -d ' :' | sort -u)"
@@ -22,6 +34,14 @@ if [ -z "$keys" ]; then
   log_error "No *_VERSION pins found in ${WORKFLOWS} — has the env layout changed?"
   exit 1
 fi
+
+# The action's own pins, reported so the log shows every version in one place.
+for input in terraform-version terragrunt-version; do
+  value="$(awk -v k="  ${input}:" '$0 == k {found=1; next} found && /^  [a-z-]+:/ {exit} found' "$SETUP_ACTION" |
+    sed -nE 's/^    default: "(.*)"$/\1/p' | head -1)"
+  [ -n "$value" ] || { log_error "setup-iac declares no default for ${input}"; exit 1; }
+  log_info "${input} = ${value} (setup-iac)"
+done
 
 drifted=0
 

@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Terraform and Terragrunt are pinned in one place. They were declared as `env` in four workflows and installed by thirteen hand-written steps; a `setup-iac` composite action now owns both versions as input defaults and does the install and the plugin cache. Beyond removing the duplication, this shrinks what cannot be tested: seven of those steps lived in Deploy and State Operations, which no pull request exercises, and they are now seven `uses:` lines calling an action that Validate runs three times on every pull request
+- `Version pins` now fails if a workflow reintroduces `TERRAFORM_VERSION` or `TERRAGRUNT_VERSION`, since such a pin would win for its own jobs and drift away unnoticed, and `Tool versions` rewrites the action's defaults for those two
+
 ### Fixed
 
 - **`move-domain` tore state in half.** `ZONES_DIR` was relative and `tg_init` leaves the process inside a zone directory, so after the source state had been emptied the target directory no longer resolved: the operation aborted with `Zone directory not found`, having removed the domain from one state and imported it into neither. Paths are absolute now

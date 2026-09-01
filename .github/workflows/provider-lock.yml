@@ -20,8 +20,6 @@ permissions:
   pull-requests: write
 
 env:
-  TERRAFORM_VERSION: "1.16.0"
-  TERRAGRUNT_VERSION: "1.1.4"
   BRANCH: chore/refresh-provider-lock
 
 jobs:
@@ -32,14 +30,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Setup Terraform ${{ env.TERRAFORM_VERSION }}
-        uses: hashicorp/setup-terraform@v4
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-          terraform_wrapper: false
-
-      - name: Install Terragrunt
-        run: bash .github/scripts/install-terragrunt.sh "${{ env.TERRAGRUNT_VERSION }}"
+      - name: Set up IaC tooling
+        uses: ./.github/actions/setup-iac
 
       - name: Refresh locks
         id: refresh
