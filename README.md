@@ -32,8 +32,8 @@ It is aimed at whoever owns a handful to a few dozen domains: an in-house platfo
 
 | Tool | Version |
 |---|---|
-| Terraform | >= 1.9 (CI runs 1.15.8) |
-| Terragrunt | >= 1.0 (CI runs 1.1.4) |
+| Terraform | >= 1.9 (CI pins an exact version in the workflows) |
+| Terragrunt | >= 1.0 (CI pins an exact version in the workflows) |
 | Cloudflare provider | ~> 5.0 (exact build pinned in each zone's `.terraform.lock.hcl`) |
 | GitHub Actions | — |
 | Terraform Cloud (HCP) | free tier |
@@ -44,6 +44,7 @@ It is aimed at whoever owns a handful to a few dozen domains: an in-house platfo
 .
 ├── .github/
 │   ├── scripts/
+│   │   ├── check-version-pins.sh # Fail when workflows disagree on a tool version
 │   │   ├── common.sh             # Shared logging utilities (log_info, log_success, etc.)
 │   │   ├── detect-zones.sh       # Detect changed/all zones for CI matrix
 │   │   ├── dmarc-checklist.sh    # DMARC authorizations we cannot publish ourselves
