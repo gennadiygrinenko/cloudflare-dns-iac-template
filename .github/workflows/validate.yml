@@ -19,7 +19,7 @@ permissions:
   pull-requests: write # for plan summary comment
 
 env:
-  TERRAFORM_VERSION: "1.15.8"
+  TERRAFORM_VERSION: "1.16.0"
   TERRAGRUNT_VERSION: "1.1.4"
   TFLINT_VERSION: "v0.64.0"
   TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
