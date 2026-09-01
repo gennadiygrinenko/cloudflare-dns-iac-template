@@ -1,13 +1,13 @@
 name: Validate
 
 on:
+  # No path filter. It used to list the Terraform paths, which meant a pull
+  # request touching only a template, the README or dependabot.yml ran no
+  # checks at all -- and those are precisely the files the hygiene hooks
+  # below guard. The heavy work is still skipped internally: zone validation
+  # runs only for zones that changed.
   pull_request:
     branches: [main]
-    paths:
-      - "envs/cloudflare/**"
-      - "terraform/modules/**"
-      - ".github/workflows/**"
-      - ".github/scripts/**"
 
 # Cancel in-progress runs for the same PR branch
 concurrency:
@@ -22,6 +22,7 @@ env:
   TERRAFORM_VERSION: "1.16.0"
   TERRAGRUNT_VERSION: "1.1.4"
   TFLINT_VERSION: "v0.64.0"
+  PRE_COMMIT_VERSION: "4.6.2"
   TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
 
 jobs:
@@ -36,6 +37,37 @@ jobs:
 
       - name: Check version pins agree
         run: bash .github/scripts/check-version-pins.sh
+
+  # ── File hygiene ─────────────────────────────────────────────────────────
+  # The pre-commit hooks were local-only: `make hooks` has to be run by hand,
+  # so anyone who never ran it bypassed all of them, and a trailing space sat
+  # in two templates until someone happened to look. The Terraform and
+  # Terragrunt hooks are skipped here because fmt, tflint and validate already
+  # run as their own steps below, with a plugin cache. What is left is the half
+  # nothing else checked at all -- including private keys and oversized files.
+  hygiene:
+    name: File hygiene
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Cache hook environments
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ env.PRE_COMMIT_VERSION }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Install pre-commit ${{ env.PRE_COMMIT_VERSION }}
+        run: pip install "pre-commit==${{ env.PRE_COMMIT_VERSION }}"
+
+      - name: Run hygiene hooks
+        env:
+          SKIP: terraform_fmt,terraform_validate,terraform_tflint,terragrunt_fmt,terragrunt_validate
+        run: pre-commit run --all-files --show-diff-on-failure
 
   # ── Detect which zones actually changed ──────────────────────────────────
   detect-zones:
@@ -207,13 +239,14 @@ jobs:
   # ── Summary gate — single status check for branch protection ─────────────
   validate-complete:
     name: Validate complete
-    needs: [version-pins, detect-zones, test, validate]
+    needs: [version-pins, hygiene, detect-zones, test, validate]
     if: always()
     runs-on: ubuntu-24.04
     steps:
       - name: Check results
         run: |
           pins="${{ needs.version-pins.result }}"
+          hygiene="${{ needs.hygiene.result }}"
           detect="${{ needs.detect-zones.result }}"
           tests="${{ needs.test.result }}"
           validate="${{ needs.validate.result }}"
@@ -221,6 +254,10 @@ jobs:
 
           if [ "$pins" != "success" ]; then
             echo "Version pins disagree between workflows (result: $pins)."
+            exit 1
+          fi
+          if [ "$hygiene" != "success" ]; then
+            echo "File hygiene hooks failed (result: $hygiene)."
             exit 1
           fi
           if [ "$detect" != "success" ]; then

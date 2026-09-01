@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `File hygiene` job in Validate — the pre-commit hooks were local-only, so anyone who never ran `make hooks` bypassed every one of them, and nothing checked for private keys, oversized files or trailing whitespace at all. The job runs the hooks that CI did not already cover; the Terraform and Terragrunt ones stay skipped, since `fmt`, `tflint` and `validate` already run as their own steps
+
+### Changed
+
+- Validate no longer filters by path. The filter listed the Terraform directories, so a pull request touching only a template, the README or `dependabot.yml` ran no checks whatsoever — which is exactly the set of files the new hygiene job exists to guard. Zone validation is still skipped internally for zones that did not change
+
 ## [2.2.0] - 2026-09-01
 
 Housekeeping, all of it in CI. The theme is versions that nothing was watching: after this, every pinned version in the repository is either updated by a robot or checked for agreement by a job.
