@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-09-01
+
+Housekeeping, all of it in CI. The theme is versions that nothing was watching: after this, every pinned version in the repository is either updated by a robot or checked for agreement by a job.
+
 ### Added
 
 - Dependabot now watches `.pre-commit-config.yaml`. The `github-actions` and `terraform` ecosystems did not cover it, which left the three pinned hook revisions as the only versions in the repository with nothing watching them — a stale hook stops enforcing a rule without ever failing. Grouped into one pull request, since no CI job runs pre-commit
@@ -14,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Terraform 1.15.8 → 1.16.0 in CI
+- Pre-commit hooks: `pre-commit-terraform` v1.96.1 → v1.109.0, `pre-commit-hooks` v5.0.0 → v6.0.0, `shellcheck-py` v0.10.0.1 → v0.11.0.1 — the first pull request the new Dependabot coverage produced
 - The README stack table no longer restates the exact versions CI pins; it names where they live. Restating a version that another file owns is what left the table claiming a provider build that had not been locked for a month
 
 ## [2.1.0] - 2026-09-01
@@ -124,7 +129,8 @@ Configuration syntax is unchanged — existing `variables.auto.tfvars` files kee
 - Pre-commit hooks: `terraform_fmt`, `terraform_validate`, `terraform_tflint`, `terragrunt_fmt`, shellcheck
 - `CODEOWNERS` for required reviews on infrastructure changes
 
-[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v1.2.0...v2.0.0
 [1.2.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v1.1.0...v1.2.0
