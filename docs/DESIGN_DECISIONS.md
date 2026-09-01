@@ -61,6 +61,19 @@ The module directory deliberately has no lock. Lock files belong to root modules
 
 Keeping the lock current is split between two mechanisms, because neither covers both halves. Dependabot owns the constraint in `versions.tf` and will propose `~> 6.0` when a major appears; it will not move the lock from 5.23.0 to 5.24.0, since it only rewrites a lock as a side effect of changing a manifest, and nothing in the manifest changes. The monthly `Provider lock` workflow owns that half: it runs `init -upgrade` plus `providers lock` per zone and opens a pull request when the resolved build moves. Monthly rather than weekly on purpose — a provider patch that lands seven days earlier changes nothing here, while action deprecations do have a deadline, which is why Dependabot stays weekly. It also validates the zones itself, because pull requests opened with `GITHUB_TOKEN` do not trigger workflows and an unchecked lock bump is exactly the change you want checked.
 
+## What is verified, and what is not
+
+Worth stating plainly, because the gap is not obvious from a green badge.
+
+**Verified by tests that run on every pull request.** The module's logic, through 15 plan-only `terraform test` cases: record keying and collisions, the TXT split, `apex_ip` and Google Workspace expansion, SPF assembly, variable validation, and every branch of DMARC report authorization. Each zone's configuration, through `terragrunt validate`. The plan and apply *decision* logic — exit codes, the `NO_CHANGES` marker, a missing artifact — through 11 cases that stub the Terragrunt call, so they need no account. Those three faults are the ones this pipeline actually shipped, and they were unreachable by any test while the logic lived inside `deploy.yml`.
+
+**Not verified: `terragrunt apply` has never run in this repository.** Not once. The Deploy workflow has executed, and its jobs have reported success, but every one of those runs had no credentials: `plan` failed with `Required token could not be found`, uploaded nothing, and the apply step of the day read the absent artifact as "no changes" and exited zero. That specific fault is fixed and now has a test. What remains untested is everything downstream of it — whether the Cloudflare provider accepts what this module generates, whether `prevent_destroy` fires where it should, whether the artifact hand-off and the environment approval behave under a real plan.
+
+The honest summary is that the shape of the pipeline is tested and its contact with Cloudflare is not.
+
+**What would close it.** One throwaway domain on a free Cloudflare account, added as a zone and deliberately never delegated — the API accepts records and settings on a zone in `Pending nameserver update`, so the whole path runs with no live DNS anywhere near it. A separate zone group on `plan = "free"`, since the Pro+ resources need a paid plan. That is the smallest thing that would turn the second paragraph above into a first.
+
+
 ## Credentials: scoped secrets, not OIDC
 
 State lives in Terraform Cloud, so no state file or cloud credential is stored in the repository, and `terraform.tfstate` never appears in a diff. Cloudflare is reached with a scoped API token (Zone:Edit + DNS:Edit) from GitHub Secrets; Terraform Cloud with `TF_API_TOKEN`.

@@ -49,10 +49,13 @@ It is aimed at whoever owns a handful to a few dozen domains: an in-house platfo
 │   │   ├── detect-zones.sh       # Detect changed/all zones for CI matrix
 │   │   ├── dmarc-checklist.sh    # DMARC authorizations we cannot publish ourselves
 │   │   ├── install-terragrunt.sh # Install Terragrunt in CI
+│   │   ├── apply-zone.sh         # Apply the plan a zone's plan step left behind
 │   │   ├── plan-state-moves.sh   # Generate moved.tf for records whose address changed
+│   │   ├── plan-zone.sh          # Plan one zone, leaving a plan file or a marker
 │   │   ├── refresh-locks.sh      # Move zone locks to the newest allowed provider
 │   │   ├── refresh-tools.sh      # Move tool pins to the newest releases
-│   │   └── state-ops.sh          # Import / remove / move domain state ops
+│   │   ├── state-ops.sh          # Import / remove / move domain state ops
+│   │   └── tests/                # Shell tests for the deploy decision logic
 │   ├── dependabot.yml            # Action, provider and pre-commit updates
 │   └── workflows/
 │       ├── validate.yml          # PR: validate changed zones in parallel
@@ -127,6 +130,8 @@ cp -r envs/cloudflare/zones/example envs/cloudflare/zones/my-company
 ### 6. Create a pull request
 
 Push to a feature branch. The `validate` workflow will run automatically. On merge to `main`, the `deploy` workflow runs plan → waits for approval → applies.
+
+One caveat worth knowing before you rely on it: the apply half of that pipeline has never run against a real Cloudflare account in this repository. Its decision logic is covered by tests, its contact with the provider is not — see [what is verified, and what is not](docs/DESIGN_DECISIONS.md#what-is-verified-and-what-is-not).
 
 ## Domain configuration reference
 
