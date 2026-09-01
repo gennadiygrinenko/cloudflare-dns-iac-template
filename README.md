@@ -33,7 +33,7 @@ It is aimed at whoever owns a handful to a few dozen domains: an in-house platfo
 | Tool | Version |
 |---|---|
 | Terraform | >= 1.9 (CI runs 1.15.8) |
-| Terragrunt | >= 1.0 (CI runs 1.1.3) |
+| Terragrunt | >= 1.0 (CI runs 1.1.4) |
 | Cloudflare provider | ~> 5.0 (locked to 5.23.0) |
 | GitHub Actions | — |
 | Terraform Cloud (HCP) | free tier |

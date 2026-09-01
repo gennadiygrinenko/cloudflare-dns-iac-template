@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `make moves` refuses to write anything when two records in state resolve to the same target address, rather than emitting a `moved.tf` that would merge them and lose one
 - `dns_records` is now exposed through the Terragrunt-generated root outputs, not just the module
 
+### Changed
+
+- Terragrunt 1.1.3 → 1.1.4 in CI
+
 ### Fixed
 
 - **The `Provider lock` workflow could never open its pull request twice.** The refreshed lock branch was pushed with a bare `--force-with-lease`, which resolves the lease base through the configured refspec — and `actions/checkout` configures `main` only. The first run passed because pushing a branch the remote does not have satisfies the lease trivially; from the second run on, git found no base for the existing branch and rejected the push with `stale info`, before the pull request step was ever reached. The base is now named explicitly, so a create still works, a re-push forces, and a concurrent push to the branch is still refused
