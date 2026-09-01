@@ -75,10 +75,23 @@ jobs:
           git -c user.name='github-actions[bot]' \
               -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
               commit -m "chore: move zone provider locks to the newest allowed release"
-          git push --force-with-lease origin "$BRANCH"
+          # A bare --force-with-lease reads the remote-tracking ref through the
+          # configured refspec, and checkout only configures main -- so it finds
+          # no lease base and rejects with "stale info" once the branch exists.
+          # Fetch the branch and name the base explicitly instead. An empty base
+          # means "must not exist yet", which is the first run.
+          git fetch origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" || true
+          lease=$(git rev-parse --verify --quiet "refs/remotes/origin/$BRANCH" || true)
+          git push --force-with-lease="$BRANCH:$lease" origin "$BRANCH"
 
           body=$(printf '## Provider lock refresh\n\n%s\nThe `~> 5.0` constraint is unchanged — only the locked build moved. Zones were validated in the workflow run, since pull requests opened by Actions do not trigger checks.\n' "$SUMMARY")
-          gh pr create --base main --head "$BRANCH" \
-            --title "chore: refresh Cloudflare provider lock" \
-            --body "$body" 2>/dev/null \
-            || gh pr edit "$BRANCH" --body "$body"
+          # Ask whether the pull request exists rather than letting a failed
+          # create fall through to edit: that swallowed the real error and
+          # reported "no pull requests found" for every kind of failure.
+          if [ -n "$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[].number')" ]; then
+            gh pr edit "$BRANCH" --body "$body"
+          else
+            gh pr create --base main --head "$BRANCH" \
+              --title "chore: refresh Cloudflare provider lock" \
+              --body "$body"
+          fi
