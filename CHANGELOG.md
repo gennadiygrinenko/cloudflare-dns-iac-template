@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Dependabot now watches `.pre-commit-config.yaml`. The `github-actions` and `terraform` ecosystems did not cover it, which left the three pinned hook revisions as the only versions in the repository with nothing watching them — a stale hook stops enforcing a rule without ever failing. Grouped into one pull request, since no CI job runs pre-commit
 - `Version pins` check in Validate — `TERRAFORM_VERSION` and `TERRAGRUNT_VERSION` are plain env strings repeated across four workflows, which Dependabot cannot see and no job noticed disagreeing. The check compares every `*_VERSION` pin across the workflows and fails when one of them is out of step, naming the file and line
 
 ### Changed
