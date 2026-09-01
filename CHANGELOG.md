@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- The plan and apply decision logic is now testable, and tested. It moved out of `deploy.yml` into `plan-zone.sh` and `apply-zone.sh`, and 11 cases exercise it with a stubbed Terragrunt: exit codes 0, 2 and 1, the `NO_CHANGES` marker, stale artifacts from an earlier run, and an apply that finds neither file. That last case is the fault this pipeline actually shipped — a missing artifact read as "no changes", reporting success while the plan had failed outright. The faults were all shell logic, so none of them need a Cloudflare account to reproduce; none were reachable by a test while the logic lived inside the workflow
+- `docs/DESIGN_DECISIONS.md` now states what is verified and what is not. `terragrunt apply` has never run in this repository: every Deploy run so far had no credentials, so `plan` failed and the apply step exited zero on the absent artifact. The decision logic is covered now; the provider interaction is not, and the document says so and says what would close it
+
 ## [2.4.0] - 2026-09-02
 
 The last gap in version coverage. Every pinned version in this repository now has something that will tell you when it moves — no exceptions left.

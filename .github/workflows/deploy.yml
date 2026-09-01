@@ -107,47 +107,8 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           TF_CLOUD_ORGANIZATION: ${{ vars.TF_CLOUD_ORGANIZATION }}
         run: |
-          source .github/scripts/common.sh
           mkdir -p "$TF_PLUGIN_CACHE_DIR"
-          log_section "Plan: ${{ matrix.zone }}"
-          cd "envs/cloudflare/zones/${{ matrix.zone }}"
-
-          # -detailed-exitcode: 0 = no changes, 2 = changes, anything else is a
-          # real failure. Grepping the log for "No changes." cannot tell an empty
-          # plan from a broken one, and the pipe to tee hides the exit code.
-          # -out must be absolute: Terragrunt runs OpenTofu/Terraform inside
-          # .terragrunt-cache, so a relative path saves the plan there.
-          set +e
-          terragrunt plan -out="${PWD}/tfplan" -detailed-exitcode --non-interactive 2>&1 | tee /tmp/plan.log
-          EXIT_CODE=${PIPESTATUS[0]}
-          set -e
-
-          echo "### Plan: ${{ matrix.zone }}" >> "$GITHUB_STEP_SUMMARY"
-          case "$EXIT_CODE" in
-            0)
-              log_info "No changes detected."
-              # Marker so a missing artifact downstream means a broken upload,
-              # not an empty plan.
-              rm -f tfplan && touch NO_CHANGES
-              echo "no_changes=true" >> "$GITHUB_OUTPUT"
-              echo "⬛ No changes." >> "$GITHUB_STEP_SUMMARY"
-              ;;
-            2)
-              log_success "Changes detected — plan saved."
-              echo "no_changes=false" >> "$GITHUB_OUTPUT"
-              echo '```hcl' >> "$GITHUB_STEP_SUMMARY"
-              grep -A 999 "Terraform will perform" /tmp/plan.log | head -60 >> "$GITHUB_STEP_SUMMARY" || true
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
-              ;;
-            *)
-              log_error "Plan failed for ${{ matrix.zone }} (exit ${EXIT_CODE})."
-              echo "❌ Plan failed." >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
-              tail -40 /tmp/plan.log >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
-              exit "$EXIT_CODE"
-              ;;
-          esac
+          bash .github/scripts/plan-zone.sh "envs/cloudflare/zones/${{ matrix.zone }}"
 
       - name: Upload plan artifact
         uses: actions/upload-artifact@v7
@@ -208,25 +169,4 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           TF_CLOUD_ORGANIZATION: ${{ vars.TF_CLOUD_ORGANIZATION }}
-        run: |
-          set -o pipefail
-          source .github/scripts/common.sh
-          log_section "Apply: ${{ matrix.zone }}"
-          ZONE_DIR="envs/cloudflare/zones/${{ matrix.zone }}"
-
-          if [ -f "${ZONE_DIR}/NO_CHANGES" ]; then
-            log_info "Plan reported no changes for ${{ matrix.zone }} — nothing to apply."
-            echo "### ${{ matrix.zone }}: no changes ⬛" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-
-          if [ ! -f "${ZONE_DIR}/tfplan" ]; then
-            log_error "Artifact for ${{ matrix.zone }} has neither a plan nor a no-changes marker."
-            exit 1
-          fi
-
-          cd "$ZONE_DIR"
-          terragrunt apply "${PWD}/tfplan" --non-interactive
-          log_success "Applied: ${{ matrix.zone }}"
-
-          echo "### Applied: ${{ matrix.zone }} ✅" >> "$GITHUB_STEP_SUMMARY"
+        run: bash .github/scripts/apply-zone.sh "envs/cloudflare/zones/${{ matrix.zone }}"

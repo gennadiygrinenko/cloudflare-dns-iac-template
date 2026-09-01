@@ -69,6 +69,20 @@ jobs:
           SKIP: terraform_fmt,terraform_validate,terraform_tflint,terragrunt_fmt,terragrunt_validate
         run: pre-commit run --all-files --show-diff-on-failure
 
+  # ── Deploy decision logic ────────────────────────────────────────────────
+  # The faults this pipeline shipped were shell logic, not Terraform: a
+  # discarded exit code, an inferred "no changes", a missing artifact read as
+  # an empty plan. None of them need a Cloudflare account to reproduce, and
+  # none were reachable by a test while the logic lived inside deploy.yml.
+  deploy-logic:
+    name: Deploy logic
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Test plan and apply decisions
+        run: bash .github/scripts/tests/deploy-logic.sh
+
   # ── Detect which zones actually changed ──────────────────────────────────
   detect-zones:
     name: Detect changed zones
@@ -239,7 +253,7 @@ jobs:
   # ── Summary gate — single status check for branch protection ─────────────
   validate-complete:
     name: Validate complete
-    needs: [version-pins, hygiene, detect-zones, test, validate]
+    needs: [version-pins, hygiene, deploy-logic, detect-zones, test, validate]
     if: always()
     runs-on: ubuntu-24.04
     steps:
@@ -247,6 +261,7 @@ jobs:
         run: |
           pins="${{ needs.version-pins.result }}"
           hygiene="${{ needs.hygiene.result }}"
+          deploy_logic="${{ needs.deploy-logic.result }}"
           detect="${{ needs.detect-zones.result }}"
           tests="${{ needs.test.result }}"
           validate="${{ needs.validate.result }}"
@@ -258,6 +273,10 @@ jobs:
           fi
           if [ "$hygiene" != "success" ]; then
             echo "File hygiene hooks failed (result: $hygiene)."
+            exit 1
+          fi
+          if [ "$deploy_logic" != "success" ]; then
+            echo "Deploy decision logic tests failed (result: $deploy_logic)."
             exit 1
           fi
           if [ "$detect" != "success" ]; then
