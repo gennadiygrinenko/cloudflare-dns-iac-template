@@ -20,7 +20,7 @@ permissions:
   pull-requests: write
 
 env:
-  TERRAFORM_VERSION: "1.15.8"
+  TERRAFORM_VERSION: "1.16.0"
   TERRAGRUNT_VERSION: "1.1.4"
   BRANCH: chore/refresh-provider-lock
 

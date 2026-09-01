@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- Terraform 1.15.8 → 1.16.0 in CI
 - The README stack table no longer restates the exact versions CI pins; it names where they live. Restating a version that another file owns is what left the table claiming a provider build that had not been locked for a month
 
 ## [2.1.0] - 2026-09-01
