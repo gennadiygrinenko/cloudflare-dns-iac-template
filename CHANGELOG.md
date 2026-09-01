@@ -12,6 +12,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `make moves` refuses to write anything when two records in state resolve to the same target address, rather than emitting a `moved.tf` that would merge them and lose one
 - `dns_records` is now exposed through the Terragrunt-generated root outputs, not just the module
 
+### Fixed
+
+- **The `Provider lock` workflow could never open its pull request twice.** The refreshed lock branch was pushed with a bare `--force-with-lease`, which resolves the lease base through the configured refspec — and `actions/checkout` configures `main` only. The first run passed because pushing a branch the remote does not have satisfies the lease trivially; from the second run on, git found no base for the existing branch and rejected the push with `stale info`, before the pull request step was ever reached. The base is now named explicitly, so a create still works, a re-push forces, and a concurrent push to the branch is still refused
+- **`gh pr create` failures were reported as a missing pull request.** Its stderr was discarded and any failure fell through to `gh pr edit`, which then said `no pull requests found for branch` whatever the real cause was — masking, in the first monthly run, that Actions lacked permission to create pull requests in the repository. The step now asks whether the pull request exists and lets errors surface
+
 ## [2.0.0] - 2026-08-14
 
 Configuration syntax is unchanged — existing `variables.auto.tfvars` files keep working. What breaks is where records live in state, and which Terragrunt runs them.
