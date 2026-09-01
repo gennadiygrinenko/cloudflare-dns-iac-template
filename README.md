@@ -34,7 +34,7 @@ It is aimed at whoever owns a handful to a few dozen domains: an in-house platfo
 |---|---|
 | Terraform | >= 1.9 (CI runs 1.15.8) |
 | Terragrunt | >= 1.0 (CI runs 1.1.4) |
-| Cloudflare provider | ~> 5.0 (locked to 5.23.0) |
+| Cloudflare provider | ~> 5.0 (exact build pinned in each zone's `.terraform.lock.hcl`) |
 | GitHub Actions | — |
 | Terraform Cloud (HCP) | free tier |
 
@@ -48,6 +48,8 @@ It is aimed at whoever owns a handful to a few dozen domains: an in-house platfo
 │   │   ├── detect-zones.sh       # Detect changed/all zones for CI matrix
 │   │   ├── dmarc-checklist.sh    # DMARC authorizations we cannot publish ourselves
 │   │   ├── install-terragrunt.sh # Install Terragrunt in CI
+│   │   ├── plan-state-moves.sh   # Generate moved.tf for records whose address changed
+│   │   ├── refresh-locks.sh      # Move zone locks to the newest allowed provider
 │   │   └── state-ops.sh          # Import / remove / move domain state ops
 │   ├── dependabot.yml            # Action + provider version updates
 │   └── workflows/
@@ -248,7 +250,7 @@ Each record is keyed as `{domain}__{type}__{name}__{hash12}`, where `hash12` is 
 
 The key includes the value, so changing a record's content or priority is a replace, not an in-place update. That is how SPF, DMARC, DKIM, and Google site verification updates apply: those four auto-TXT records used to have stable keys with `ignore_changes = [content]` on every record, so Terraform ignored the new value. `ignore_changes` is now only on TXT, and it does not apply across a replace.
 
-Existing state from before this key scheme will destroy and recreate every DNS record on first apply (TXT also move to `cloudflare_dns_record.txt`). For a live estate, `terraform state mv` old addresses onto the new keys, or accept a brief recreate.
+Existing state from before this key scheme will destroy and recreate every DNS record on first apply (TXT also move to `cloudflare_dns_record.txt`). On a live estate that is an outage for MX and the mail TXT records, so generate `moved` blocks first — see [Migrating state after a key change](#migrating-state-after-a-key-change).
 
 ### All available settings
 
