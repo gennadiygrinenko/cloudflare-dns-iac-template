@@ -1,0 +1,110 @@
+name: Tool versions
+
+# Move the pinned tool versions to the newest release each project has
+# published, and open a pull request when that changes anything.
+#
+# Dependabot cannot do this: these are plain env strings, not entries in any
+# manifest, so no ecosystem reaches them. The Version pins check keeps the
+# workflows agreeing with each other but has no idea a newer release exists —
+# which is how Terragrunt 1.1.4 went unnoticed for two weeks, and how Terraform
+# 1.16.0 was found only because somebody went and looked.
+
+on:
+  schedule:
+    # Monthly, on the 3rd, so it does not land the same morning as the provider
+    # lock refresh and the Trivy scan. A tool release a fortnight earlier
+    # changes nothing here; Dependabot stays weekly because action
+    # deprecations are the half with a deadline.
+    - cron: "41 6 3 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  BRANCH: chore/refresh-tool-versions
+
+jobs:
+  refresh:
+    name: Refresh tool versions
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Move pins to the newest releases
+        id: refresh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash .github/scripts/refresh-tools.sh
+
+      # A tool bump that nobody runs is how a broken pin reaches main. Pull
+      # requests opened with GITHUB_TOKEN do not start workflows, so the new
+      # versions are exercised here instead — the same reasoning the provider
+      # lock refresh applies to its zones.
+      - name: Setup Terraform ${{ steps.refresh.outputs.terraform }}
+        if: steps.refresh.outputs.changed == 'true'
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ steps.refresh.outputs.terraform }}
+          terraform_wrapper: false
+
+      - name: Install Terragrunt ${{ steps.refresh.outputs.terragrunt }}
+        if: steps.refresh.outputs.changed == 'true'
+        run: bash .github/scripts/install-terragrunt.sh "${{ steps.refresh.outputs.terragrunt }}"
+
+      - name: Module tests with the new versions
+        if: steps.refresh.outputs.changed == 'true'
+        run: |
+          terraform -chdir=terraform/modules/dns-zone init -backend=false -input=false
+          terraform -chdir=terraform/modules/dns-zone test
+
+      - name: Validate zones with the new versions
+        if: steps.refresh.outputs.changed == 'true'
+        env:
+          TG_BACKEND: local
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || '0123456789abcdef0123456789abcdef' }}
+        run: |
+          set -o pipefail
+          source .github/scripts/common.sh
+          for dir in envs/cloudflare/zones/*/; do
+            grep -qE '^\s*"[^"]+"\s*=' "${dir}variables.auto.tfvars" 2>/dev/null || continue
+            log_section "Validate: $(basename "$dir")"
+            (cd "$dir" && terragrunt validate --non-interactive)
+          done
+
+      - name: Open pull request
+        if: steps.refresh.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SUMMARY: ${{ steps.refresh.outputs.summary }}
+        run: |
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              checkout -B "$BRANCH"
+          git add .github/workflows
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -m "chore(ci): move tool version pins to the newest releases"
+
+          # A bare --force-with-lease resolves its base through the configured
+          # refspec, and checkout configures the default branch only, so it
+          # rejects with "stale info" as soon as the branch exists. Name the
+          # base explicitly; an empty base means "must not exist yet".
+          git fetch origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" || true
+          lease=$(git rev-parse --verify --quiet "refs/remotes/origin/$BRANCH" || true)
+          git push --force-with-lease="$BRANCH:$lease" origin "$BRANCH"
+
+          body=$(printf '## Tool version refresh\n\n%s\nThese pins are plain env strings, so no Dependabot ecosystem sees them. The module tests and every zone were run against the new versions inside the workflow, since pull requests opened by Actions do not trigger checks.\n\nRead the linked release notes before merging — this workflow only reports that a newer version exists, it cannot tell whether the change is safe.\n' "$SUMMARY")
+
+          # Ask whether the pull request exists rather than letting a failed
+          # create fall through to edit, which reports a missing pull request
+          # whatever actually went wrong.
+          if [ -n "$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[].number')" ]; then
+            gh pr edit "$BRANCH" --body "$body"
+          else
+            gh pr create --base main --head "$BRANCH" \
+              --title "chore(ci): refresh tool version pins" \
+              --body "$body"
+          fi

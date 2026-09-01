@@ -51,13 +51,15 @@ It is aimed at whoever owns a handful to a few dozen domains: an in-house platfo
 │   │   ├── install-terragrunt.sh # Install Terragrunt in CI
 │   │   ├── plan-state-moves.sh   # Generate moved.tf for records whose address changed
 │   │   ├── refresh-locks.sh      # Move zone locks to the newest allowed provider
+│   │   ├── refresh-tools.sh      # Move tool pins to the newest releases
 │   │   └── state-ops.sh          # Import / remove / move domain state ops
-│   ├── dependabot.yml            # Action + provider version updates
+│   ├── dependabot.yml            # Action, provider and pre-commit updates
 │   └── workflows/
 │       ├── validate.yml          # PR: validate changed zones in parallel
 │       ├── deploy.yml            # main: plan → apply (with approval gate)
 │       ├── provider-lock.yml     # Monthly: refresh provider lock, open a PR
 │       ├── security.yml          # Trivy config scan → code scanning alerts
+│       ├── tool-versions.yml     # Monthly: refresh tool pins, open a PR
 │       └── state-ops.yml         # Manual: import/remove/move domain
 ├── docs/
 │   └── DESIGN_DECISIONS.md       # Why the module is shaped this way
