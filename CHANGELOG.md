@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-09-02
+
+The last gap in version coverage. Every pinned version in this repository now has something that will tell you when it moves — no exceptions left.
+
 ### Added
 
 - `Tool versions` workflow — monthly, it moves `TERRAFORM_VERSION`, `TERRAGRUNT_VERSION`, `TFLINT_VERSION`, `TRIVY_VERSION` and `PRE_COMMIT_VERSION` to the newest release each project has published, and opens a pull request when anything moved. These are plain env strings, so no Dependabot ecosystem reaches them; the `Version pins` check keeps the workflows agreeing with each other but cannot know a newer release exists. Each pin keeps its own prefix style, the module tests and every zone are run against the new versions inside the workflow, and the run fails rather than committing if the rewrite left the pins disagreeing
@@ -145,7 +149,8 @@ Configuration syntax is unchanged — existing `variables.auto.tfvars` files kee
 - Pre-commit hooks: `terraform_fmt`, `terraform_validate`, `terraform_tflint`, `terragrunt_fmt`, shellcheck
 - `CODEOWNERS` for required reviews on infrastructure changes
 
-[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.3.0...HEAD
+[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.0.0...v2.1.0
