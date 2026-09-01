@@ -43,6 +43,8 @@ It is aimed at whoever owns a handful to a few dozen domains: an in-house platfo
 ```
 .
 ├── .github/
+│   ├── actions/
+│   │   └── setup-iac/            # Composite: installs the pinned Terraform + Terragrunt
 │   ├── scripts/
 │   │   ├── check-version-pins.sh # Fail when workflows disagree on a tool version
 │   │   ├── common.sh             # Shared logging utilities (log_info, log_success, etc.)

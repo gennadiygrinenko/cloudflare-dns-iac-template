@@ -37,10 +37,6 @@ concurrency:
   group: terraform-state-${{ inputs.zone }}
   cancel-in-progress: false
 
-env:
-  TERRAFORM_VERSION: "1.16.0"
-  TERRAGRUNT_VERSION: "1.1.4"
-  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
 
 jobs:
   state-op:
@@ -51,22 +47,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Setup Terraform ${{ env.TERRAFORM_VERSION }}
-        uses: hashicorp/setup-terraform@v4
+      - name: Set up IaC tooling
+        uses: ./.github/actions/setup-iac
         with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-          terraform_wrapper: false
-          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
-
-      - name: Install Terragrunt
-        run: bash .github/scripts/install-terragrunt.sh "${{ env.TERRAGRUNT_VERSION }}"
-
-      - name: Cache Terraform plugins
-        uses: actions/cache@v6
-        with:
-          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
-          key: tf-plugins-${{ env.TERRAFORM_VERSION }}-${{ hashFiles('**/versions.tf') }}
-          restore-keys: tf-plugins-${{ env.TERRAFORM_VERSION }}-
+          tfc-token: ${{ secrets.TF_API_TOKEN }}
 
       - name: Validate inputs
         run: |

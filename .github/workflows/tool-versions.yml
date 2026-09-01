@@ -43,16 +43,14 @@ jobs:
       # requests opened with GITHUB_TOKEN do not start workflows, so the new
       # versions are exercised here instead — the same reasoning the provider
       # lock refresh applies to its zones.
-      - name: Setup Terraform ${{ steps.refresh.outputs.terraform }}
+      # The only caller that passes versions: it installs what it just resolved,
+      # not the pins, because the pins are what it is proposing to change.
+      - name: Set up IaC tooling
         if: steps.refresh.outputs.changed == 'true'
-        uses: hashicorp/setup-terraform@v4
+        uses: ./.github/actions/setup-iac
         with:
-          terraform_version: ${{ steps.refresh.outputs.terraform }}
-          terraform_wrapper: false
-
-      - name: Install Terragrunt ${{ steps.refresh.outputs.terragrunt }}
-        if: steps.refresh.outputs.changed == 'true'
-        run: bash .github/scripts/install-terragrunt.sh "${{ steps.refresh.outputs.terragrunt }}"
+          terraform-version: ${{ steps.refresh.outputs.terraform }}
+          terragrunt-version: ${{ steps.refresh.outputs.terragrunt }}
 
       - name: Module tests with the new versions
         if: steps.refresh.outputs.changed == 'true'

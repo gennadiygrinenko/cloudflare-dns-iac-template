@@ -19,11 +19,8 @@ permissions:
   pull-requests: write # for plan summary comment
 
 env:
-  TERRAFORM_VERSION: "1.16.0"
-  TERRAGRUNT_VERSION: "1.1.4"
   TFLINT_VERSION: "v0.64.0"
   PRE_COMMIT_VERSION: "4.6.2"
-  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
 
 jobs:
   # ── Tool version pins ────────────────────────────────────────────────────
@@ -115,18 +112,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Setup Terraform ${{ env.TERRAFORM_VERSION }}
-        uses: hashicorp/setup-terraform@v4
+      - name: Set up IaC tooling
+        uses: ./.github/actions/setup-iac
         with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-          terraform_wrapper: false
-
-      - name: Cache Terraform plugins
-        uses: actions/cache@v6
-        with:
-          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
-          key: tf-plugins-${{ env.TERRAFORM_VERSION }}-${{ hashFiles('**/versions.tf') }}
-          restore-keys: tf-plugins-${{ env.TERRAFORM_VERSION }}-
+          terragrunt: "false"
 
       - name: terraform test
         run: |
@@ -148,22 +137,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Setup Terraform ${{ env.TERRAFORM_VERSION }}
-        uses: hashicorp/setup-terraform@v4
+      - name: Set up IaC tooling
+        uses: ./.github/actions/setup-iac
         with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-          terraform_wrapper: false
-          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
-
-      - name: Install Terragrunt
-        run: bash .github/scripts/install-terragrunt.sh "${{ env.TERRAGRUNT_VERSION }}"
-
-      - name: Cache Terraform plugins
-        uses: actions/cache@v6
-        with:
-          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
-          key: tf-plugins-${{ env.TERRAFORM_VERSION }}-${{ hashFiles('**/versions.tf', '**/versions.generated.tf') }}
-          restore-keys: tf-plugins-${{ env.TERRAFORM_VERSION }}-
+          tfc-token: ${{ secrets.TF_API_TOKEN }}
 
       - name: terraform fmt check
         run: terraform fmt -check -recursive terraform/
@@ -228,14 +205,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Setup Terraform ${{ env.TERRAFORM_VERSION }}
-        uses: hashicorp/setup-terraform@v4
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-          terraform_wrapper: false
-
-      - name: Install Terragrunt
-        run: bash .github/scripts/install-terragrunt.sh "${{ env.TERRAGRUNT_VERSION }}"
+      - name: Set up IaC tooling
+        uses: ./.github/actions/setup-iac
 
       - name: Collect checklist
         id: collect
