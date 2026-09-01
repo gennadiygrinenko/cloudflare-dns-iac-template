@@ -10,9 +10,9 @@ labels: bug
 
 ## Steps to reproduce
 
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ## Expected behavior
 
@@ -24,10 +24,10 @@ labels: bug
 
 ## Environment
 
-- Terraform version: 
-- Terragrunt version: 
-- Cloudflare provider version: 
-- OS: 
+- Terraform version:
+- Terragrunt version:
+- Cloudflare provider version:
+- OS:
 
 ## Additional context
 
