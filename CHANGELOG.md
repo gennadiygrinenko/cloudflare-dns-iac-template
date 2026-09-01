@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-09-01
+
+Enforcement, not new rules. The pre-commit hooks had been configured since 1.0 and run by nobody but whoever remembered `make hooks`; now they run where they cannot be skipped, and Validate can actually see the files they guard.
+
 ### Added
 
 - `File hygiene` job in Validate — the pre-commit hooks were local-only, so anyone who never ran `make hooks` bypassed every one of them, and nothing checked for private keys, oversized files or trailing whitespace at all. The job runs the hooks that CI did not already cover; the Terraform and Terragrunt ones stay skipped, since `fmt`, `tflint` and `validate` already run as their own steps
@@ -137,7 +141,8 @@ Configuration syntax is unchanged — existing `variables.auto.tfvars` files kee
 - Pre-commit hooks: `terraform_fmt`, `terraform_validate`, `terraform_tflint`, `terragrunt_fmt`, shellcheck
 - `CODEOWNERS` for required reviews on infrastructure changes
 
-[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.3.0...HEAD
+[2.3.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v1.2.0...v2.0.0
