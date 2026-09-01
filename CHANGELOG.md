@@ -6,7 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-09-01
+
+Nothing about the configuration changes: `variables.auto.tfvars` and the module interface are the same as 2.0.0. What is new is a supported way through the 2.0.0 state migration, and a provider lock refresh that actually works — it had been failing on every run since the first one, in three separate ways, without anyone being told.
+
 ### Added
+
 - `make moves zone=<zone>` — generates a `moved.tf` for records whose address changed, matching state to configuration by zone, type, name, content, and priority rather than by reconstructing an old key format. The 2.0.0 key change becomes a reviewable set of `moved` blocks instead of a destroy-and-create of every record, which for MX and the SPF/DKIM/DMARC TXT records was a gap in mail delivery
 - Records present in state but absent from the configuration are reported separately, since they are destroyed rather than moved
 - `make moves` refuses to write anything when two records in state resolve to the same target address, rather than emitting a `moved.tf` that would merge them and lose one
@@ -14,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- Cloudflare provider 5.23.0 → 5.24.0 in the zone locks; the `~> 5.0` constraint is unchanged
 - Terragrunt 1.1.3 → 1.1.4 in CI
 
 ### Fixed
@@ -108,7 +114,8 @@ Configuration syntax is unchanged — existing `variables.auto.tfvars` files kee
 - Pre-commit hooks: `terraform_fmt`, `terraform_validate`, `terraform_tflint`, `terragrunt_fmt`, shellcheck
 - `CODEOWNERS` for required reviews on infrastructure changes
 
-[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v1.2.0...v2.0.0
 [1.2.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v1.0.0...v1.1.0
