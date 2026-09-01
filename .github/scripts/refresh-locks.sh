@@ -46,8 +46,21 @@ for dir in "${ZONES_DIR}"/*/; do
   (
     cd "$dir"
     terragrunt init -backend=false -upgrade --non-interactive >/dev/null
-    terraform providers lock "${PLATFORMS[@]}" >/dev/null
+    # Through Terragrunt, not terraform directly: Terragrunt copies the unit
+    # into .terragrunt-cache and generates the .tf files there, so a bare
+    # `terraform providers lock` here runs against an empty directory, silently
+    # locks nothing, and leaves whatever `init` recorded for the runner's own
+    # platform. Output is left visible -- hiding it is what kept that quiet.
+    terragrunt run -- providers lock "${PLATFORMS[@]}"
   )
+
+  # A lock that covers only the platform that generated it is the failure this
+  # step is here to prevent, and it looks exactly like success. Count instead.
+  h1_count="$(grep -c '"h1:' "$lock" || true)"
+  if [ "$h1_count" -ne "${#PLATFORMS[@]}" ]; then
+    log_error "${zone}: lock has ${h1_count} h1 hashes, expected ${#PLATFORMS[@]} (one per platform)"
+    exit 1
+  fi
 
   after="$(locked_version "$lock")"
   if [ "$before" != "$after" ]; then
