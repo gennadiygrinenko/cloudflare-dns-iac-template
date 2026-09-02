@@ -16,7 +16,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
-- 10 plan-only cases covering the zone, the fourteen zone settings and the three rulesets — the eighteen of the module's twenty resources that no test touched, the other two being the record resources the existing 15 cases already assert on. They cover plan defaults per plan tier, override precedence, the Pro+ gate that keeps paid settings off a free zone, the boolean-to-`on`/`off` mapping, and the redirect and firewall rulesets. Proved by mutation: 44 deliberate faults, including every one of the 30 ways one boolean setting could read another's field, all turn the suite red
+- `make mutants` runs those 43 faults on demand. It lives beside the suite it mutates rather than in a workflow: the mutations are anchored to the text of `main.tf` and `variables.tf`, so a rename would turn the pipeline red without anything being broken, and an anchor that stops matching is reported as a failure here instead — that is the signal the harness has fallen behind the module
+- 10 plan-only cases covering the zone, the fourteen zone settings and the three rulesets — the eighteen of the module's twenty resources that no test touched, the other two being the record resources the existing 15 cases already assert on. They cover plan defaults per plan tier, override precedence, the Pro+ gate that keeps paid settings off a free zone, the boolean-to-`on`/`off` mapping, and the redirect and firewall rulesets. Proved by mutation: 43 deliberate faults, including every one of the 30 ways one boolean setting could read another's field, all turn the suite red
 
 ## [2.6.0] - 2026-09-02
 

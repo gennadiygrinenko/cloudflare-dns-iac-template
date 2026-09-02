@@ -38,6 +38,11 @@ test: ## Run module logic tests (plan-only, no credentials)
 	terraform -chdir=terraform/modules/dns-zone init -backend=false -input=false
 	terraform -chdir=terraform/modules/dns-zone test
 
+.PHONY: mutants
+mutants: ## Break the module on purpose, one edit at a time, and check the tests notice
+	terraform -chdir=terraform/modules/dns-zone init -backend=false -input=false
+	python3 terraform/modules/dns-zone/tests/mutants.py
+
 .PHONY: hooks
 hooks: ## Install pre-commit hooks
 	pre-commit install
