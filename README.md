@@ -67,7 +67,8 @@ It is aimed at whoever owns a handful to a few dozen domains: an in-house platfo
 │       ├── tool-versions.yml     # Monthly: refresh tool pins, open a PR
 │       └── state-ops.yml         # Manual: import/remove/move domain
 ├── docs/
-│   └── DESIGN_DECISIONS.md       # Why the module is shaped this way
+│   ├── DESIGN_DECISIONS.md       # Why the module is shaped this way
+│   └── PIPELINES.md              # What each workflow decides, and where it refuses to continue
 ├── envs/cloudflare/
 │   ├── backend.hcl               # Terraform Cloud backend (shared)
 │   ├── zones.hcl                 # Provider + module wiring (shared)
@@ -133,7 +134,7 @@ cp -r envs/cloudflare/zones/example envs/cloudflare/zones/my-company
 
 Push to a feature branch. The `validate` workflow will run automatically. On merge to `main`, the `deploy` workflow runs plan → waits for approval → applies.
 
-One caveat worth knowing before you rely on it: the apply half of that pipeline has never run against a real Cloudflare account in this repository. Its decision logic is covered by tests, its contact with the provider is not — see [what is verified, and what is not](docs/DESIGN_DECISIONS.md#what-is-verified-and-what-is-not).
+One caveat worth knowing before you rely on it: the apply half of that pipeline has never run against a real Cloudflare account in this repository. Its decision logic is covered by tests, its contact with the provider is not — see [what is verified, and what is not](docs/DESIGN_DECISIONS.md#what-is-verified-and-what-is-not). The workflows themselves, and the gate each one enforces, are in [docs/PIPELINES.md](docs/PIPELINES.md).
 
 ## Domain configuration reference
 

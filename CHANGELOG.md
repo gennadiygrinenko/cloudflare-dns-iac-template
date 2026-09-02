@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- `docs/PIPELINES.md`: the six workflows, the gate each one enforces, and two diagrams — what a zone directory is generated from, and where Deploy refuses to continue. This existed only as a published page written against v2.1.0, which was stale within a day of being written; documentation that duplicates the repository drifts where nobody sees it, so it lives in git now, in a diff someone reviews
 - `make mutants` runs those 43 faults on demand. It lives beside the suite it mutates rather than in a workflow: the mutations are anchored to the text of `main.tf` and `variables.tf`, so a rename would turn the pipeline red without anything being broken, and an anchor that stops matching is reported as a failure here instead — that is the signal the harness has fallen behind the module
 - 10 plan-only cases covering the zone, the fourteen zone settings and the three rulesets — the eighteen of the module's twenty resources that no test touched, the other two being the record resources the existing 15 cases already assert on. They cover plan defaults per plan tier, override precedence, the Pro+ gate that keeps paid settings off a free zone, the boolean-to-`on`/`off` mapping, and the redirect and firewall rulesets. Proved by mutation: 43 deliberate faults, including every one of the 30 ways one boolean setting could read another's field, all turn the suite red
 
