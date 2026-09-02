@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- 4 `terraform test` cases that apply the module against a mocked Cloudflare provider. A plan cannot check the references between resources — every `zone_id` is "known after apply" — so a record attached to the wrong zone, a DMARC authorization record published in the sending zone instead of the receiving one, or a `dns_record_ids` output missing its TXT half all plan cleanly. The four cases pin each record, setting and ruleset to the zone its key names and check the outputs are complete. Each zone is given a fixed 32-hex ID through `override_resource`, because `cloudflare_ruleset` validates `zone_id` and the mock's generated IDs do not pass. No account and no API: this proves the module's wiring, not what Cloudflare accepts, and `docs/DESIGN_DECISIONS.md` still says so
+- Six wiring mutations in `make mutants`, one per fault above; 49 in total, all red
+
 ## [2.7.1] - 2026-09-02
 
 Zone detection, the quietest decision in the pipeline, examined and found wrong twice. A pull request that touched only the tool pins validated zero zones and passed; a deleted zone was still scheduled. Both are covered now, and with them the last of the three coverage gaps agreed for this release line.

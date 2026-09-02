@@ -93,5 +93,5 @@ repository — the plan and apply steps of Deploy, the artifact hand-off and the
 environment approval are only exercised by a push to `main` with credentials
 present.
 
-`make mutants` is the other half: it breaks the module 43 ways and checks the
+`make mutants` is the other half: it breaks the module 49 ways and checks the
 test suite notices. It runs by hand, deliberately — see the design notes.
