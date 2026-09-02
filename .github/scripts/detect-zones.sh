@@ -33,9 +33,11 @@ list_all_zones_with_domains() {
 }
 
 # Paths that affect every zone: the module itself, the shared Terragrunt HCL,
-# and the CI that runs them. A change here validated against zero zones tells
-# you nothing, which is how an action bump can look tested without being run.
-SHARED_PATHS='^(terraform/modules/|envs/cloudflare/[^/]+\.hcl|\.github/(workflows|scripts)/)'
+# and the CI that runs them -- including the composite action that pins the
+# tools, which Dependabot bumps in pull requests that do trigger workflows. A
+# change here validated against zero zones tells you nothing, which is how an
+# action bump can look tested without being run.
+SHARED_PATHS='^(terraform/modules/|envs/cloudflare/[^/]+\.hcl|\.github/(workflows|scripts|actions)/)'
 
 if [ -n "$BASE_SHA" ] && [ -n "$HEAD_SHA" ]; then
   # PR mode: shared change → validate all zones; otherwise only changed zones
@@ -48,6 +50,12 @@ if [ -n "$BASE_SHA" ] && [ -n "$HEAD_SHA" ]; then
         | { grep "^${ZONES_DIR}/" || true; } \
         | sed "s|^${ZONES_DIR}/\([^/]*\)/.*|\1|" \
         | sort -u \
+        | while read -r zone; do
+            # The diff lists deleted files too; a removed zone has nothing to
+            # validate. Not `&&`: under pipefail the loop's status is its last
+            # command's, and a missing directory would sink the whole pipeline.
+            if [ -d "${ZONES_DIR}/${zone}" ]; then echo "$zone"; fi
+          done \
         | to_json_array
     )
   fi

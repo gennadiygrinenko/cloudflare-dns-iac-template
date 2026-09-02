@@ -57,7 +57,7 @@ Terraform Cloud organisation and no credentials.
 flowchart TD
     push["push to main"] --> pre["Preflight<br/>four credentials present?"]
     pre -->|"no"| skipped["Detect zones, Plan, Apply<br/>skipped, with a summary saying why"]
-    pre -->|"yes"| detect["Detect zones<br/>changed zone dirs, or all on a shared path"]
+    pre -->|"yes"| detect["Detect zones<br/>every zone with domains"]
     detect --> plan["Plan / zone<br/>terragrunt plan"]
     plan -->|"plan fails"| red["job fails<br/>nothing is uploaded"]
     plan -->|"no changes"| marker["upload plan artifact<br/>+ NO_CHANGES marker"]
@@ -87,7 +87,8 @@ the same zone at once.
 
 Validate covers the module's logic, each zone's configuration, the decision
 logic of the plan, apply and state-operation scripts, the moved-block
-generator behind `make moves`, and the workflows' version pins. It does not cover `terragrunt apply`, which has never run in this
+generator behind `make moves`, the zone detection that builds both matrices,
+and the workflows' version pins. It does not cover `terragrunt apply`, which has never run in this
 repository — the plan and apply steps of Deploy, the artifact hand-off and the
 environment approval are only exercised by a push to `main` with credentials
 present.
