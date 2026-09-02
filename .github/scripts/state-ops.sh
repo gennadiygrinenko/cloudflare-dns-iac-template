@@ -62,7 +62,8 @@ import_domain() {
     log_success "Zone imported."
   fi
 
-  log_info "DNS records will sync on next apply."
+  log_warning "Only the zone is imported. Records that already exist in Cloudflare are not,"
+  log_warning "and an apply would try to create them again — run \`make imports zone=${ZONE}\` first."
 }
 
 remove_domain() {

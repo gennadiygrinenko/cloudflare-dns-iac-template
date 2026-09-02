@@ -322,6 +322,16 @@ Use the **State Operations** workflow in the GitHub Actions UI:
 | `remove-domain` | Remove a domain from state (does not delete from Cloudflare) |
 | `move-domain` | Move a domain from one zone to another |
 
+### Bringing an existing zone under management
+
+`import-domain` adopts the zone only. Its records already exist in Cloudflare, so an apply that tried to create them would be rejected as duplicates — and on a domain that serves mail, the apply is the last place to discover a difference between the configuration and the live zone.
+
+1. Describe the domain in `variables.auto.tfvars` **as it is today**: every record, and `settings` set to the zone's current values, since the module otherwise applies its own defaults.
+2. `make import zone=<zone> domain=<domain>` — the zone.
+3. `make imports zone=<zone>` — reads the live records, matches each to the address the configuration gives it, and writes `imports.tf`. Records it cannot match are listed: live ones stay unmanaged, configured ones will be created. Both lists should be empty before you go on.
+4. `make plan zone=<zone>` — every record shows as *will be imported* and nothing shows as changed, destroyed or replaced. If it does, fix the configuration, not the plan.
+5. Apply, then delete `imports.tf`.
+
 ## Local development
 
 ```bash

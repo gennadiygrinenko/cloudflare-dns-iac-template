@@ -90,6 +90,9 @@ jobs:
       - name: Test zone detection
         run: bash .github/scripts/tests/detect-zones-logic.sh
 
+      - name: Test import-block generation
+        run: bash .github/scripts/tests/record-imports-logic.sh
+
   # ── Detect which zones actually changed ──────────────────────────────────
   detect-zones:
     name: Detect changed zones
