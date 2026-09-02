@@ -6,13 +6,10 @@ on:
 
 permissions:
   contents: read
-  # Reserved for Terraform Cloud OIDC. Today both TFC and Cloudflare are
-  # authenticated with static scoped tokens — see docs/DESIGN_DECISIONS.md.
-  id-token: write
 
 
 jobs:
-  # ── Refuse to pretend: a fresh fork has no TFC org and no tokens ──────────
+  # ── Refuse to pretend: a fresh fork has no state bucket and no tokens ──────
   preflight:
     name: Preflight
     runs-on: ubuntu-24.04
@@ -23,16 +20,18 @@ jobs:
       - name: Check deployment credentials
         id: check
         env:
-          TF_CLOUD_ORGANIZATION: ${{ vars.TF_CLOUD_ORGANIZATION }}
-          HAS_TF_TOKEN: ${{ secrets.TF_API_TOKEN != '' }}
-          HAS_CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          HAS_R2_KEY: ${{ secrets.R2_ACCESS_KEY_ID != '' }}
+          HAS_R2_SECRET: ${{ secrets.R2_SECRET_ACCESS_KEY != '' }}
+          HAS_CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
         run: |
           missing=""
-          [ -n "$TF_CLOUD_ORGANIZATION" ] || missing="${missing} vars.TF_CLOUD_ORGANIZATION"
+          [ -n "$R2_BUCKET" ]             || missing="${missing} vars.R2_BUCKET"
           [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || missing="${missing} vars.CLOUDFLARE_ACCOUNT_ID"
-          [ "$HAS_TF_TOKEN" = "true" ] || missing="${missing} secrets.TF_API_TOKEN"
-          [ "$HAS_CF_TOKEN" = "true" ] || missing="${missing} secrets.CLOUDFLARE_API_TOKEN"
+          [ "$HAS_R2_KEY" = "true" ]      || missing="${missing} secrets.R2_ACCESS_KEY_ID"
+          [ "$HAS_R2_SECRET" = "true" ]   || missing="${missing} secrets.R2_SECRET_ACCESS_KEY"
+          [ "$HAS_CF_TOKEN" = "true" ]    || missing="${missing} secrets.CLOUDFLARE_API_TOKEN"
 
           if [ -n "$missing" ]; then
             echo "configured=false" >> "$GITHUB_OUTPUT"
@@ -43,7 +42,7 @@ jobs:
               for item in $missing; do echo "- \`${item}\`"; done
               echo
               echo "This is expected in a fresh fork. See the README for setup;"
-              echo "plan and apply stay skipped until all four are present."
+              echo "plan and apply stay skipped until all five are present."
             } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "configured=true" >> "$GITHUB_OUTPUT"
@@ -81,15 +80,15 @@ jobs:
 
       - name: Set up IaC tooling
         uses: ./.github/actions/setup-iac
-        with:
-          tfc-token: ${{ secrets.TF_API_TOKEN }}
 
       - name: Plan — ${{ matrix.zone }}
         id: plan
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          TF_CLOUD_ORGANIZATION: ${{ vars.TF_CLOUD_ORGANIZATION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
         run: |
           mkdir -p "$TF_PLUGIN_CACHE_DIR"
           bash .github/scripts/plan-zone.sh "envs/cloudflare/zones/${{ matrix.zone }}"
@@ -125,8 +124,6 @@ jobs:
 
       - name: Set up IaC tooling
         uses: ./.github/actions/setup-iac
-        with:
-          tfc-token: ${{ secrets.TF_API_TOKEN }}
 
       # No continue-on-error: the plan job always uploads either a plan or a
       # NO_CHANGES marker, so a failed download is a real failure.
@@ -140,5 +137,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          TF_CLOUD_ORGANIZATION: ${{ vars.TF_CLOUD_ORGANIZATION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
         run: bash .github/scripts/apply-zone.sh "envs/cloudflare/zones/${{ matrix.zone }}"

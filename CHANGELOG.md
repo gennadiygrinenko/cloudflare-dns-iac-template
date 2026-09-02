@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **State moves from Terraform Cloud to a Cloudflare R2 bucket**, through Terraform's S3 backend. GitHub has no built-in state store, and R2 keeps the state with the vendor the repository already manages, S3-compatible, on a free tier — one vendor fewer. One object per zone, `zones/<zone>/terraform.tfstate`, locked with the backend's native lock file. The GitHub configuration changes: `TF_API_TOKEN` and `TF_CLOUD_ORGANIZATION` are gone; `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` (secrets) and `R2_BUCKET` (variable) take their place, and `Preflight` checks for all five. Zone directories lose their `TF_WORKSPACE` block: `terragrunt.hcl` is now two `include` blocks. Anyone with existing Terraform Cloud state migrates it with `terraform init -migrate-state` after setting the new variables; this repository had none
+- The workflows no longer request `id-token: write`, which was reserved for a Terraform Cloud OIDC feature that no longer applies
+
+
 ### Fixed
 
 - **No TXT record could ever match itself in `make moves` or `make imports`.** Cloudflare returns TXT content quoted — `"v=spf1 include:icloud.com ~all"` — and splits long values into quoted 255-character chunks, while the configuration holds the bare string. Both matchers compared the two forms literally, so every SPF, DKIM and verification record on a live zone would have been reported as unmanaged and about to be created, and the first apply would have tried to create duplicates of the records that carry the domain's mail. Found on the first real zone snapshot, not by a test: the fixtures had been written the way the configuration looks, not the way Cloudflare answers. TXT content is now compared in its bare form on both sides; other types are compared as they are

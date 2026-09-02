@@ -17,10 +17,6 @@ inputs:
     description: Install Terragrunt as well. Set to false for jobs that only run Terraform.
     required: false
     default: "true"
-  tfc-token:
-    description: Terraform Cloud token, for jobs that reach the backend.
-    required: false
-    default: ""
   cache-key-files:
     description: Glob whose hash keys the plugin cache.
     required: false
@@ -42,7 +38,6 @@ runs:
       with:
         terraform_version: ${{ inputs.terraform-version }}
         terraform_wrapper: false
-        cli_config_credentials_token: ${{ inputs.tfc-token }}
 
     - name: Install Terragrunt ${{ inputs.terragrunt-version }}
       if: inputs.terragrunt == 'true'
