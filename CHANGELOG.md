@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-09-02
+
+The plan defaults, documented since 2.0, had never reached a single zone: four variables carried values where the fallback needed `null`, and nothing asserted what the documentation promised. Eighteen of the module's twenty resources and the moved-block generator now have tests, and the tests have a harness that breaks the code on purpose to check they notice.
+
 ### Fixed
 
 - **Plan-based defaults never applied.** `plan = "pro"` is documented to turn on Polish, Mirage and the Cloudflare Managed WAF with no further configuration. It turned on none of them: `settings.polish`, `settings.mirage`, `settings.rocket_loader` and `waf_managed_enabled` carried defaults in `variables.tf`, so `coalesce(user_value, plan_default)` always found a value in its first argument and the `plan_defaults` map was dead code. Every Pro, Business and Enterprise zone was planned with `polish = "off"`, `mirage = "off"` and no managed WAF ruleset, matching neither the README nor `docs/DESIGN_DECISIONS.md`. Those four variables now default to `null`, which is what makes the fallback reachable; an explicit value, `false` included, still wins
@@ -16,10 +20,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- 10 plan-only cases covering the zone, the fourteen zone settings and the three rulesets — the eighteen of the module's twenty resources that no test touched, the other two being the record resources the existing 15 cases already assert on. They cover plan defaults per plan tier, override precedence, the Pro+ gate that keeps paid settings off a free zone, the boolean-to-`on`/`off` mapping, and the redirect and firewall rulesets. Proved by mutation: 43 deliberate faults, including every one of the 30 ways one boolean setting could read another's field, all turn the suite red
+- `make mutants` runs those 43 faults on demand. It lives beside the suite it mutates rather than in a workflow: the mutations are anchored to the text of `main.tf` and `variables.tf`, so a rename would turn the pipeline red without anything being broken, and an anchor that stops matching is reported as a failure here instead — that is the signal the harness has fallen behind the module
 - 23 cases for `plan-state-moves.sh`, the generator behind `make moves`. It matches every record in state to its new address on five fields and writes `moved.tf`; a wrong match does not fail, it writes a valid file that moves a record onto another record's address and passes plan, review and apply as a normal change. The script had `STATE_JSON_FILE` / `PLAN_JSON_FILE` fixture hooks documented as "Testing hooks" since it was written, and nothing had ever used them. Proved by mutation: eleven faults — each field dropped from the match, the apex mapping, the TXT resource, the collision refusal, the stale-file removal, the no-op filter, orphan reporting — all turn the suite red. Runs in the `Script logic` job
 - `docs/PIPELINES.md`: the six workflows, the gate each one enforces, and two diagrams — what a zone directory is generated from, and where Deploy refuses to continue. This existed only as a published page written against v2.1.0, which was stale within a day of being written; documentation that duplicates the repository drifts where nobody sees it, so it lives in git now, in a diff someone reviews
-- `make mutants` runs those 43 faults on demand. It lives beside the suite it mutates rather than in a workflow: the mutations are anchored to the text of `main.tf` and `variables.tf`, so a rename would turn the pipeline red without anything being broken, and an anchor that stops matching is reported as a failure here instead — that is the signal the harness has fallen behind the module
-- 10 plan-only cases covering the zone, the fourteen zone settings and the three rulesets — the eighteen of the module's twenty resources that no test touched, the other two being the record resources the existing 15 cases already assert on. They cover plan defaults per plan tier, override precedence, the Pro+ gate that keeps paid settings off a free zone, the boolean-to-`on`/`off` mapping, and the redirect and firewall rulesets. Proved by mutation: 43 deliberate faults, including every one of the 30 ways one boolean setting could read another's field, all turn the suite red
 
 ## [2.6.0] - 2026-09-02
 
@@ -192,7 +196,8 @@ Configuration syntax is unchanged — existing `variables.auto.tfvars` files kee
 - Pre-commit hooks: `terraform_fmt`, `terraform_validate`, `terraform_tflint`, `terragrunt_fmt`, shellcheck
 - `CODEOWNERS` for required reviews on infrastructure changes
 
-[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.6.0...HEAD
+[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.7.0...HEAD
+[2.7.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.3.0...v2.4.0
