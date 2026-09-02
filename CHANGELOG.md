@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.7.1] - 2026-09-02
+
+Zone detection, the quietest decision in the pipeline, examined and found wrong twice. A pull request that touched only the tool pins validated zero zones and passed; a deleted zone was still scheduled. Both are covered now, and with them the last of the three coverage gaps agreed for this release line.
+
 ### Fixed
 
 - **A change to the `setup-iac` action validated zero zones.** `SHARED_PATHS` in `detect-zones.sh` predates the composite action and did not cover `.github/actions/`, so a pull request touching only the tool pins — the kind Dependabot opens for `hashicorp/setup-terraform` and `actions/cache`, and Dependabot's pull requests do trigger workflows — selected no zones, reported `any_changes=false`, and passed `Validate complete` without a single `terragrunt validate`. The path is covered now
@@ -205,7 +209,8 @@ Configuration syntax is unchanged — existing `variables.auto.tfvars` files kee
 - Pre-commit hooks: `terraform_fmt`, `terraform_validate`, `terraform_tflint`, `terragrunt_fmt`, shellcheck
 - `CODEOWNERS` for required reviews on infrastructure changes
 
-[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.7.0...HEAD
+[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.7.1...HEAD
+[2.7.1]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.7.0...v2.7.1
 [2.7.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.4.0...v2.5.0
