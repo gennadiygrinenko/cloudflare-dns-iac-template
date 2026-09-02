@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-09-02
+
+The module is now applied in tests, against a mocked provider, which is where the references between resources become visible: every `zone_id` is unknown until then. What Cloudflare itself accepts remains the one thing no test here can say.
+
 ### Added
 
 - 4 `terraform test` cases that apply the module against a mocked Cloudflare provider. A plan cannot check the references between resources — every `zone_id` is "known after apply" — so a record attached to the wrong zone, a DMARC authorization record published in the sending zone instead of the receiving one, or a `dns_record_ids` output missing its TXT half all plan cleanly. The four cases pin each record, setting and ruleset to the zone its key names and check the outputs are complete. Each zone is given a fixed 32-hex ID through `override_resource`, because `cloudflare_ruleset` validates `zone_id` and the mock's generated IDs do not pass. No account and no API: this proves the module's wiring, not what Cloudflare accepts, and `docs/DESIGN_DECISIONS.md` still says so
@@ -214,7 +218,8 @@ Configuration syntax is unchanged — existing `variables.auto.tfvars` files kee
 - Pre-commit hooks: `terraform_fmt`, `terraform_validate`, `terraform_tflint`, `terragrunt_fmt`, shellcheck
 - `CODEOWNERS` for required reviews on infrastructure changes
 
-[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.7.1...HEAD
+[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.8.0...HEAD
+[2.8.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.7.1...v2.8.0
 [2.7.1]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.7.0...v2.7.1
 [2.7.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.5.0...v2.6.0
