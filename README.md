@@ -279,12 +279,18 @@ settings = {
   security_level           = "medium"      # off | essentially_off | low | medium | high | under_attack
   max_upload               = 100           # MB; 100 on free, up to 500 on Pro+
 
-  # Pro+ only (ignored on free plan)
+  # Pro+ only (ignored on free plan). Leave one out and the plan default
+  # applies: lossless and mirage on for Pro+, rocket_loader off everywhere.
   polish        = "lossless"  # off | lossless | lossy
   mirage        = true        # mobile image optimization
   rocket_loader = false       # async JS loading (opt-in — can break some JS)
 }
 ```
+
+Every setting above the Pro+ block takes the value shown when omitted. The Pro+
+three and `waf_managed_enabled` are the exception: omitted means "use the plan
+default", which is why setting one explicitly — `waf_managed_enabled = false`
+on a Pro zone, say — is how you opt out.
 
 ## Migrating state after a key change
 

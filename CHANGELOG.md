@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Plan-based defaults never applied.** `plan = "pro"` is documented to turn on Polish, Mirage and the Cloudflare Managed WAF with no further configuration. It turned on none of them: `settings.polish`, `settings.mirage`, `settings.rocket_loader` and `waf_managed_enabled` carried defaults in `variables.tf`, so `coalesce(user_value, plan_default)` always found a value in its first argument and the `plan_defaults` map was dead code. Every Pro, Business and Enterprise zone was planned with `polish = "off"`, `mirage = "off"` and no managed WAF ruleset, matching neither the README nor `docs/DESIGN_DECISIONS.md`. Those four variables now default to `null`, which is what makes the fallback reachable; an explicit value, `false` included, still wins
+
+### Changed
+
+- The eleven zone settings available on every plan no longer re-declare their defaults in `main.tf`. `variables.tf` fills them before the module runs, so the `coalesce` fallback there was unreachable too — harmless while the two agreed, and silently won by `variables.tf` if they ever diverged
+
+### Added
+
+- 10 plan-only cases covering the zone, the fourteen zone settings and the three rulesets — the eighteen of the module's twenty resources that no test touched, the other two being the record resources the existing 15 cases already assert on. They cover plan defaults per plan tier, override precedence, the Pro+ gate that keeps paid settings off a free zone, the boolean-to-`on`/`off` mapping, and the redirect and firewall rulesets. Proved by mutation: 44 deliberate faults, including every one of the 30 ways one boolean setting could read another's field, all turn the suite red
+
 ## [2.6.0] - 2026-09-02
 
 The two operations nobody had ever run turned out to be broken, and the setup steps nobody could test were consolidated behind something that is tested. Both halves of the same observation: code that no pull request exercises does not stay correct by being read.

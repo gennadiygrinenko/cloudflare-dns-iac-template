@@ -278,13 +278,18 @@ resource "cloudflare_zone" "this" {
 
 # -------------------------------------------------------------------
 # Zone settings (Cloudflare provider v5: individual resources per setting)
+#
+# Defaults for these live in variables.tf, which fills them before the module
+# sees them — a second default here would be unreachable and free to drift.
+# The Pro+ settings below are the exception: their variables default to null
+# so local.resolved can supply a plan-dependent default.
 # -------------------------------------------------------------------
 resource "cloudflare_zone_setting" "ssl" {
   for_each = var.domains
 
   zone_id    = cloudflare_zone.this[each.key].id
   setting_id = "ssl"
-  value      = coalesce(each.value.settings.ssl, "strict")
+  value      = each.value.settings.ssl
 }
 
 resource "cloudflare_zone_setting" "always_use_https" {
@@ -292,7 +297,7 @@ resource "cloudflare_zone_setting" "always_use_https" {
 
   zone_id    = cloudflare_zone.this[each.key].id
   setting_id = "always_use_https"
-  value      = coalesce(each.value.settings.always_use_https, true) ? "on" : "off"
+  value      = each.value.settings.always_use_https ? "on" : "off"
 }
 
 resource "cloudflare_zone_setting" "min_tls_version" {
@@ -300,7 +305,7 @@ resource "cloudflare_zone_setting" "min_tls_version" {
 
   zone_id    = cloudflare_zone.this[each.key].id
   setting_id = "min_tls_version"
-  value      = coalesce(each.value.settings.min_tls_version, "1.2")
+  value      = each.value.settings.min_tls_version
 }
 
 resource "cloudflare_zone_setting" "automatic_https_rewrites" {
@@ -308,7 +313,7 @@ resource "cloudflare_zone_setting" "automatic_https_rewrites" {
 
   zone_id    = cloudflare_zone.this[each.key].id
   setting_id = "automatic_https_rewrites"
-  value      = coalesce(each.value.settings.automatic_https_rewrites, true) ? "on" : "off"
+  value      = each.value.settings.automatic_https_rewrites ? "on" : "off"
 }
 
 resource "cloudflare_zone_setting" "ipv6" {
@@ -316,7 +321,7 @@ resource "cloudflare_zone_setting" "ipv6" {
 
   zone_id    = cloudflare_zone.this[each.key].id
   setting_id = "ipv6"
-  value      = coalesce(each.value.settings.ipv6, true) ? "on" : "off"
+  value      = each.value.settings.ipv6 ? "on" : "off"
 }
 
 resource "cloudflare_zone_setting" "brotli" {
@@ -324,7 +329,7 @@ resource "cloudflare_zone_setting" "brotli" {
 
   zone_id    = cloudflare_zone.this[each.key].id
   setting_id = "brotli"
-  value      = coalesce(each.value.settings.brotli, true) ? "on" : "off"
+  value      = each.value.settings.brotli ? "on" : "off"
 }
 
 resource "cloudflare_zone_setting" "early_hints" {
@@ -332,7 +337,7 @@ resource "cloudflare_zone_setting" "early_hints" {
 
   zone_id    = cloudflare_zone.this[each.key].id
   setting_id = "early_hints"
-  value      = coalesce(each.value.settings.early_hints, true) ? "on" : "off"
+  value      = each.value.settings.early_hints ? "on" : "off"
 }
 
 resource "cloudflare_zone_setting" "always_online" {
@@ -340,7 +345,7 @@ resource "cloudflare_zone_setting" "always_online" {
 
   zone_id    = cloudflare_zone.this[each.key].id
   setting_id = "always_online"
-  value      = coalesce(each.value.settings.always_online, false) ? "on" : "off"
+  value      = each.value.settings.always_online ? "on" : "off"
 }
 
 resource "cloudflare_zone_setting" "cache_level" {
@@ -348,7 +353,7 @@ resource "cloudflare_zone_setting" "cache_level" {
 
   zone_id    = cloudflare_zone.this[each.key].id
   setting_id = "cache_level"
-  value      = coalesce(each.value.settings.cache_level, "aggressive")
+  value      = each.value.settings.cache_level
 }
 
 resource "cloudflare_zone_setting" "security_level" {
@@ -356,7 +361,7 @@ resource "cloudflare_zone_setting" "security_level" {
 
   zone_id    = cloudflare_zone.this[each.key].id
   setting_id = "security_level"
-  value      = coalesce(each.value.settings.security_level, "medium")
+  value      = each.value.settings.security_level
 }
 
 resource "cloudflare_zone_setting" "max_upload" {
@@ -364,7 +369,7 @@ resource "cloudflare_zone_setting" "max_upload" {
 
   zone_id    = cloudflare_zone.this[each.key].id
   setting_id = "max_upload"
-  value      = coalesce(each.value.settings.max_upload, 100)
+  value      = each.value.settings.max_upload
 }
 
 # -------------------------------------------------------------------

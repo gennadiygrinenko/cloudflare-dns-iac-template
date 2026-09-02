@@ -39,10 +39,12 @@ variable "domains" {
       security_level           = optional(string, "medium")     # off | essentially_off | low | medium | high | under_attack
       max_upload               = optional(number, 100)          # MB; 100 on free, up to 500 on Pro+
 
-      # Pro+ only (ignored on free plan)
-      polish        = optional(string, "off") # off | lossless | lossy
-      mirage        = optional(bool, false)   # mobile image optimization
-      rocket_loader = optional(bool, false)   # async JS loading
+      # Pro+ only (ignored on free plan). null, not a value: these fall back
+      # to the plan defaults in main.tf, and a default here would win the
+      # coalesce and leave every Pro zone on the free-plan settings.
+      polish        = optional(string, null) # off | lossless | lossy; Pro+ default lossless
+      mirage        = optional(bool, null)   # mobile image optimization; Pro+ default true
+      rocket_loader = optional(bool, null)   # async JS loading; opt-in on every plan
     }), {})
 
     # Shortcut: auto-creates proxied A records for @ and www pointing to the same IP
@@ -78,7 +80,8 @@ variable "domains" {
 
     # WAF: Cloudflare Managed Ruleset (Pro+ only)
     # When enabled, activates the Cloudflare Managed Ruleset on the zone.
-    waf_managed_enabled = optional(bool, false)
+    # null defers to the plan default (on for Pro+); false opts out explicitly.
+    waf_managed_enabled = optional(bool, null)
 
     # WAF: custom firewall rules (Pro+ only)
     # Each rule: { expression, description, action, enabled }
