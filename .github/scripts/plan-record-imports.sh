@@ -81,6 +81,11 @@ report="$(
     --argjson state "$state_json" \
     --argjson plan "$plan_json" \
     --argjson live "$live_json" '
+    # Cloudflare returns TXT content quoted, and long values split into quoted
+    # 255-character chunks; configuration holds the bare string. Compare the
+    # bare form on both sides, or no TXT record ever matches itself.
+    def bare_txt($type; $s):
+      if $type == "TXT" then ($s | gsub("\" \""; "") | ltrimstr("\"") | rtrimstr("\"")) else $s end;
     def resources($doc):
       [$doc.values?.root_module? | .. | objects | select(has("address") and has("type") and has("values"))];
 
@@ -112,7 +117,7 @@ report="$(
             .domain == $r.domain
             and .type == $r.type
             and .fqdn == $r.name
-            and .value == $r.content
+            and bare_txt(.type; .value) == bare_txt($r.type; $r.content)
             and .priority == $r.priority
           ))) as $exact
         | { record: $r,
