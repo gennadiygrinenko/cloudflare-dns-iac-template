@@ -86,8 +86,8 @@ the same zone at once.
 ## What a pull request actually exercises
 
 Validate covers the module's logic, each zone's configuration, the decision
-logic of the plan, apply and state-operation scripts, and the workflows'
-version pins. It does not cover `terragrunt apply`, which has never run in this
+logic of the plan, apply and state-operation scripts, the moved-block
+generator behind `make moves`, and the workflows' version pins. It does not cover `terragrunt apply`, which has never run in this
 repository — the plan and apply steps of Deploy, the artifact hand-off and the
 environment approval are only exercised by a push to `main` with credentials
 present.

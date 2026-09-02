@@ -84,6 +84,9 @@ jobs:
       - name: Test state operation routing
         run: bash .github/scripts/tests/state-ops-logic.sh
 
+      - name: Test moved-block generation
+        run: bash .github/scripts/tests/state-moves-logic.sh
+
   # ── Detect which zones actually changed ──────────────────────────────────
   detect-zones:
     name: Detect changed zones
