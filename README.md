@@ -20,7 +20,7 @@ It is aimed at whoever owns a handful to a few dozen domains: an in-house platfo
 - **Multi-zone structure** — each logical group of domains is an isolated Terraform workspace
 - **DRY config** — Terragrunt code generation; zone dirs contain only `variables.auto.tfvars`
 - **GitHub Actions CI/CD** — validate on PR, plan + apply on merge to `main` with required approvals
-- **Terraform Cloud backend** — remote state, so no state file or credential lives in the repo (Cloudflare and TFC are reached with scoped API tokens from GitHub Secrets)
+- **State in Cloudflare R2** — remote state through Terraform's S3 backend, in a bucket with the vendor the repo already talks to; no state file or credential lives in the repo, and no third vendor is involved
 - **Google Workspace auto-records** — set `google_workspace = true` to auto-generate MX, SPF, DMARC, DKIM, CNAME records
 - **Apex shortcut** — set `apex_ip` to auto-create proxied `@` and `www` A records in one line
 - **Domain redirect** — set `redirect_to` for a 301 redirect ruleset
@@ -36,7 +36,7 @@ It is aimed at whoever owns a handful to a few dozen domains: an in-house platfo
 | Terragrunt | >= 1.0 (CI pins an exact version in the workflows) |
 | Cloudflare provider | ~> 5.0 (exact build pinned in each zone's `.terraform.lock.hcl`) |
 | GitHub Actions | — |
-| Terraform Cloud (HCP) | free tier |
+| Cloudflare R2 (state) | free tier, S3-compatible |
 
 ## Repository structure
 
@@ -70,7 +70,7 @@ It is aimed at whoever owns a handful to a few dozen domains: an in-house platfo
 │   ├── DESIGN_DECISIONS.md       # Why the module is shaped this way
 │   └── PIPELINES.md              # What each workflow decides, and where it refuses to continue
 ├── envs/cloudflare/
-│   ├── backend.hcl               # Terraform Cloud backend (shared)
+│   ├── backend.hcl               # R2 state backend (shared)
 │   ├── zones.hcl                 # Provider + module wiring (shared)
 │   └── zones/
 │       ├── acme/                 # Example zone
@@ -95,11 +95,12 @@ git clone https://github.com/your-username/cloudflare-dns-iac-template.git
 cd cloudflare-dns-iac-template
 ```
 
-### 2. Set up Terraform Cloud
+### 2. Create the state bucket in R2
 
-1. Create a free account at [app.terraform.io](https://app.terraform.io)
-2. Create an organization
-3. Generate an API token: **User Settings → Tokens → Create API token**
+1. Cloudflare dashboard → **R2 Object Storage** → **Create bucket**; name it, e.g. `cloudflare-dns-state`, location *Automatic*
+2. **R2 → Manage R2 API Tokens → Create API token**: permission *Object Read & Write*, scoped to that bucket only. Copy the **Access Key ID** and **Secret Access Key** — the secret is shown once
+
+GitHub has no built-in Terraform state store, so state needs a home outside the runner. R2 keeps it with the vendor this repo already manages; Terraform reaches it through the S3 backend, one object per zone (`zones/<zone>/terraform.tfstate`), with the backend's native lock file for locking.
 
 ### 3. Configure GitHub secrets and variables
 
@@ -107,12 +108,13 @@ In your GitHub repository → **Settings → Secrets and variables → Actions**
 
 | Name | Type | Description |
 |---|---|---|
-| `CLOUDFLARE_API_TOKEN` | Secret | Cloudflare API token with Zone:Edit + DNS:Edit |
-| `TF_API_TOKEN` | Secret | Terraform Cloud API token |
-| `CLOUDFLARE_ACCOUNT_ID` | Variable | Your Cloudflare account ID (32-char hex) |
-| `TF_CLOUD_ORGANIZATION` | Variable | Your Terraform Cloud organization name |
+| `CLOUDFLARE_API_TOKEN` | Secret | Cloudflare API token: Zone Read, DNS Edit, Zone Settings Edit on the zones you manage |
+| `R2_ACCESS_KEY_ID` | Secret | Access Key ID of the R2 API token |
+| `R2_SECRET_ACCESS_KEY` | Secret | Secret Access Key of the R2 API token |
+| `CLOUDFLARE_ACCOUNT_ID` | Variable | Your Cloudflare account ID (32-char hex); also forms the R2 endpoint |
+| `R2_BUCKET` | Variable | Name of the state bucket |
 
-Until all four exist, the Deploy workflow stops at its preflight job and says so in the run summary: plan and apply are skipped rather than run against nothing. Validate does not need any of them — pull requests work in a fresh fork.
+Until all five exist, the Deploy workflow stops at its preflight job and says so in the run summary: plan and apply are skipped rather than run against nothing. Validate does not need any of them — pull requests work in a fresh fork.
 
 ### 4. Set up the production environment
 
@@ -126,7 +128,6 @@ Copy an existing zone directory and edit `variables.auto.tfvars`:
 
 ```bash
 cp -r envs/cloudflare/zones/example envs/cloudflare/zones/my-company
-# Edit envs/cloudflare/zones/my-company/terragrunt.hcl  (set TF_WORKSPACE)
 # Edit envs/cloudflare/zones/my-company/variables.auto.tfvars (add your domains)
 ```
 
@@ -341,7 +342,9 @@ brew install terraform terragrunt pre-commit tflint
 # Set environment variables
 export CLOUDFLARE_API_TOKEN=your-token
 export CLOUDFLARE_ACCOUNT_ID=your-account-id
-export TF_CLOUD_ORGANIZATION=your-org
+export R2_BUCKET=cloudflare-dns-state
+export AWS_ACCESS_KEY_ID=r2-access-key-id          # the S3 backend reads AWS_* names
+export AWS_SECRET_ACCESS_KEY=r2-secret-access-key
 
 # Install pre-commit hooks
 make hooks

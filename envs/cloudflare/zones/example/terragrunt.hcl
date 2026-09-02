@@ -5,12 +5,3 @@ include "root" {
 include "zone" {
   path = find_in_parent_folders("zones.hcl")
 }
-
-terraform {
-  extra_arguments "workspace" {
-    commands = get_terraform_commands_that_need_vars()
-    env_vars = {
-      TF_WORKSPACE = "cloudflare-dns-example"
-    }
-  }
-}

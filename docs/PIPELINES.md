@@ -10,7 +10,7 @@ what is and is not covered by tests is the last section there.
 | Workflow | Trigger | Gate |
 | --- | --- | --- |
 | **Validate** | pull request to `main` | Seven jobs plus `Validate complete`, the single required check. Five of them must report exactly `success`, so a skipped or cancelled job fails the gate rather than passing as one; the per-zone `validate` job is required only when `Detect changed zones` reports `any_changes=true`, which is how a docs-only pull request passes with an empty zone matrix |
-| **Deploy** | push to `main` | `Preflight` checks all four credentials are present and skips plan and apply outright when they are not. Apply additionally waits on the `production` environment's reviewers |
+| **Deploy** | push to `main` | `Preflight` checks all five credentials and variables are present and skips plan and apply outright when they are not. Apply additionally waits on the `production` environment's reviewers |
 | **Security** | pull request, push to `main`, monthly | Trivy misconfiguration scan over `terraform/**` and the workflows |
 | **State Operations** | `workflow_dispatch` only | One of `import-domain`, `remove-domain`, `move-domain`, per zone and domain. Never automatic: these rewrite state and have no undo |
 | **Provider lock** | monthly, or manual | Opens a pull request when `init -upgrade` resolves a newer provider build, and validates the zones itself — a `GITHUB_TOKEN` pull request triggers no workflows |
@@ -26,11 +26,11 @@ the repository but never edited by hand.
 flowchart TD
     subgraph written["Written by hand"]
         tfvars["variables.auto.tfvars<br/>domains = { ... }"]
-        tghcl["terragrunt.hcl<br/>includes + TF_WORKSPACE"]
+        tghcl["terragrunt.hcl<br/>two includes, nothing else"]
     end
 
     subgraph shared["Shared, one copy for every zone"]
-        backend["backend.hcl<br/>TG_BACKEND=cloud → Terraform Cloud<br/>TG_BACKEND=local → local state"]
+        backend["backend.hcl<br/>default → Cloudflare R2 via the S3 backend<br/>TG_BACKEND=local → local state"]
         zones["zones.hcl<br/>provider, versions, module wiring, outputs"]
     end
 
@@ -49,13 +49,13 @@ flowchart TD
 ```
 
 `TG_BACKEND=local` is what lets a pull request run `terragrunt validate` with no
-Terraform Cloud organisation and no credentials.
+state bucket and no credentials.
 
 ## Deploy: two gates, both of which have been wrong before
 
 ```mermaid
 flowchart TD
-    push["push to main"] --> pre["Preflight<br/>four credentials present?"]
+    push["push to main"] --> pre["Preflight<br/>five credentials present?"]
     pre -->|"no"| skipped["Detect zones, Plan, Apply<br/>skipped, with a summary saying why"]
     pre -->|"yes"| detect["Detect zones<br/>every zone with domains"]
     detect --> plan["Plan / zone<br/>terragrunt plan"]

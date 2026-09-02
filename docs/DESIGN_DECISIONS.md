@@ -78,10 +78,16 @@ The honest summary is that the shape of the pipeline is tested and its contact w
 **What would close it.** One throwaway domain on a free Cloudflare account, added as a zone and deliberately never delegated — the API accepts records and settings on a zone in `Pending nameserver update`, so the whole path runs with no live DNS anywhere near it. A separate zone group on `plan = "free"`, since the Pro+ resources need a paid plan. That is the smallest thing that would turn the second paragraph above into a first.
 
 
+## State in Cloudflare R2, through the S3 backend
+
+GitHub has no built-in Terraform state store — GitLab does, which is why a GitLab version of this setup never needed one — so state has to live somewhere the runner can reach on every run. The first design used Terraform Cloud. It was replaced with an R2 bucket before the first real apply, for one reason: it removes a vendor. The repository manages Cloudflare, its credentials are Cloudflare tokens, and R2 is S3-compatible, so Terraform's S3 backend reaches it with a set of `skip_*` flags and an endpoint. One object per zone, `zones/<zone>/terraform.tfstate`; locking through the backend's native lock file, which relies on conditional writes that R2 supports.
+
+The cost is the S3 backend's AWS-flavoured names: the R2 API token's key and secret are read from `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. The GitHub secrets are named `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` and mapped in each job, so the workflow files say what they hold.
+
 ## Credentials: scoped secrets, not OIDC
 
-State lives in Terraform Cloud, so no state file or cloud credential is stored in the repository, and `terraform.tfstate` never appears in a diff. Cloudflare is reached with a scoped API token (Zone:Edit + DNS:Edit) from GitHub Secrets; Terraform Cloud with `TF_API_TOKEN`.
+State lives in R2, so no state file or cloud credential is stored in the repository, and `terraform.tfstate` never appears in a diff. Cloudflare is reached with a scoped API token (Zone Read, DNS Edit, Zone Settings Edit on the managed zones) from GitHub Secrets; the bucket with an R2 API token scoped to that bucket.
 
-This is deliberately not described as OIDC. The workflows request `id-token: write` in anticipation of Terraform Cloud's OIDC support, but the Cloudflare provider is authenticated with a static token today. Cloudflare does not accept GitHub OIDC for the Terraform provider, so claiming keyless authentication would be false — and anyone evaluating this repo will open the workflow and see the secret.
+This is deliberately not described as OIDC. Neither the Cloudflare provider nor R2 accepts GitHub's OIDC tokens, so claiming keyless authentication would be false — and anyone evaluating this repo will open the workflow and see the secrets. The workflows no longer request `id-token: write`; it was reserved for a Terraform Cloud feature that no longer applies.
 
 What is enforced instead: applies run only from `main`, behind a GitHub Environment with required reviewers; state operations run behind the same gate; and PRs from forks get validation without any secrets, which is why the checks that need credentials are scoped to same-repository pull requests.
