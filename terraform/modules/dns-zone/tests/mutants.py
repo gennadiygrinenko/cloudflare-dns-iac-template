@@ -5,8 +5,8 @@ Each entry below breaks the module on purpose, one edit at a time, and the
 suite has to notice. A mutation that leaves the suite green is a hole in the
 tests, not a fault in the module — that is the whole output of this script.
 
-Run by hand, not in CI. The mutations are anchored to the text of main.tf and
-variables.tf, so a rename breaks the anchor rather than the module, and a red
+Run by hand, not in CI. The mutations are anchored to the text of main.tf,
+variables.tf and outputs.tf, so a rename breaks the anchor rather than the module, and a red
 pipeline that means "someone renamed a variable" is worse than no pipeline. An
 anchor that no longer matches is reported as a failure here for the same
 reason: it means this file has fallen behind the module, and the mutation it
@@ -27,6 +27,7 @@ import sys
 MODULE = pathlib.Path(__file__).resolve().parent.parent
 MAIN = MODULE / "main.tf"
 VARIABLES = MODULE / "variables.tf"
+OUTPUTS = MODULE / "outputs.tf"
 
 # Booleans whose zone_setting blocks are near-identical, so a block reading its
 # neighbour's field is the plausible copy-paste fault. Every ordered pair is
@@ -120,6 +121,42 @@ MUTATIONS: list[tuple[str, pathlib.Path, str, str]] = [
         'type    = "full"',
         'type    = "partial"',
     ),
+    (
+        "regular records attach to the first zone, whatever their domain",
+        MAIN,
+        "  for_each = local.records_regular\n\n  zone_id  = cloudflare_zone.this[each.value.domain].id",
+        "  for_each = local.records_regular\n\n  zone_id  = cloudflare_zone.this[keys(var.domains)[0]].id",
+    ),
+    (
+        "TXT records attach to the first zone, whatever their domain",
+        MAIN,
+        "  for_each = local.records_txt\n\n  zone_id  = cloudflare_zone.this[each.value.domain].id",
+        "  for_each = local.records_txt\n\n  zone_id  = cloudflare_zone.this[keys(var.domains)[0]].id",
+    ),
+    (
+        "the DMARC authorization record is published in the sending zone",
+        MAIN,
+        "      domain = local.dmarc_rua_zone[domain]\n      type   = \"TXT\"",
+        "      domain = domain\n      type   = \"TXT\"",
+    ),
+    (
+        "a zone setting attaches to the first zone",
+        MAIN,
+        "  zone_id    = cloudflare_zone.this[each.key].id\n  setting_id = \"polish\"",
+        "  zone_id    = cloudflare_zone.this[keys(var.domains)[0]].id\n  setting_id = \"polish\"",
+    ),
+    (
+        "the redirect ruleset attaches to the first zone",
+        MAIN,
+        "  zone_id     = cloudflare_zone.this[each.key].id\n  name        = \"Redirect",
+        "  zone_id     = cloudflare_zone.this[keys(var.domains)[0]].id\n  name        = \"Redirect",
+    ),
+    (
+        "dns_record_ids forgets the TXT records",
+        OUTPUTS,
+        "    { for key, rec in cloudflare_dns_record.txt : key => rec.id },\n",
+        "",
+    ),
     *[
         (
             f"the {victim} setting reads the {source} field",
@@ -150,7 +187,7 @@ def main() -> int:
         print("The suite is not green to begin with; fix that first.")
         return 1
 
-    originals = {path: path.read_text() for path in (MAIN, VARIABLES)}
+    originals = {path: path.read_text() for path in (MAIN, VARIABLES, OUTPUTS)}
     survivors: list[str] = []
 
     try:

@@ -342,7 +342,7 @@ make fmt
 # Run module logic tests (no Cloudflare account needed)
 make test
 
-# Break the module on purpose 43 ways and check the tests notice
+# Break the module on purpose 49 ways and check the tests notice
 make mutants
 
 # Work on a zone
