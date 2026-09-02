@@ -73,6 +73,10 @@ validate: .check-zone ## terragrunt validate for a zone
 moves: .check-zone ## Generate moved.tf for records whose address changed
 	bash .github/scripts/plan-state-moves.sh $(zone)
 
+.PHONY: imports
+imports: .check-zone ## Generate imports.tf for records that already exist in Cloudflare
+	bash .github/scripts/plan-record-imports.sh $(zone)
+
 .PHONY: state-list
 state-list: .check-zone ## List all resources in state for a zone
 	cd $(ZONES_DIR)/$(zone) && terragrunt state list

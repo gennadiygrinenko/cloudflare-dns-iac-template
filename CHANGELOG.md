@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `make imports zone=<zone>`: adopts records that already exist in Cloudflare. `import-domain` brings in the zone only; the records are live, so the next apply would try to create them and Cloudflare would reject the duplicates — which, on a domain that serves mail, is the wrong moment to learn the configuration does not match. The generator reads the live records, matches each to the address the configuration gives it on the same five fields `make moves` uses, and writes `imports.tf`. It reports live records the configuration does not describe, configured records that do not exist yet, refuses two live copies of one record, and skips what is already in state. 31 cases over `STATE_JSON_FILE` / `PLAN_JSON_FILE` / `LIVE_JSON_FILE` fixtures, in the `Script logic` job; 14 mutations, all red
+- README: the steps for bringing an existing zone under management, ending in a plan that shows imports and nothing else
+
+### Changed
+
+- `import-domain` no longer says that records "will sync on next apply". They will not — an apply would try to create them — so it now says to run `make imports` first
+
 ## [2.8.0] - 2026-09-02
 
 The module is now applied in tests, against a mocked provider, which is where the references between resources become visible: every `zone_id` is unknown until then. What Cloudflare itself accepts remains the one thing no test here can say.
