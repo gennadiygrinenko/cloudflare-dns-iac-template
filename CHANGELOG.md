@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A change to the `setup-iac` action validated zero zones.** `SHARED_PATHS` in `detect-zones.sh` predates the composite action and did not cover `.github/actions/`, so a pull request touching only the tool pins — the kind Dependabot opens for `hashicorp/setup-terraform` and `actions/cache`, and Dependabot's pull requests do trigger workflows — selected no zones, reported `any_changes=false`, and passed `Validate complete` without a single `terragrunt validate`. The path is covered now
+- **A deleted zone directory was put in the Validate matrix.** `git diff --name-only` lists removed files too, so removing a zone produced a `Validate / <zone>` job against a directory that no longer exists. Zones are now filtered to directories that are present at the head commit
+
+### Added
+
+- 24 cases for `detect-zones.sh`, which decides what enters the Validate and Deploy matrices. A zone it leaves out is neither validated nor deployed, and nothing reports that, since an empty matrix is a legitimate outcome. The cases run the script against a throwaway git repository: both modes, every shared path, several files in one zone, a new zone, a deleted zone, a zone with no domains, and the single-line JSON that `GITHUB_OUTPUT` requires. The two fixes above are the two cases that failed first. Runs in the `Script logic` job
+
 ## [2.7.0] - 2026-09-02
 
 The plan defaults, documented since 2.0, had never reached a single zone: four variables carried values where the fallback needed `null`, and nothing asserted what the documentation promised. Eighteen of the module's twenty resources and the moved-block generator now have tests, and the tests have a harness that breaks the code on purpose to check they notice.
