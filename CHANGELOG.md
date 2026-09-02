@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.9.0] - 2026-09-02
+
+Built for one domain that serves mail today. Adopting it needs every live record imported under the address the module gives it, before an apply that would otherwise try to recreate them; `make imports` does that, and the import step no longer claims the records will sort themselves out.
+
 ### Added
 
 - `make imports zone=<zone>`: adopts records that already exist in Cloudflare. `import-domain` brings in the zone only; the records are live, so the next apply would try to create them and Cloudflare would reject the duplicates — which, on a domain that serves mail, is the wrong moment to learn the configuration does not match. The generator reads the live records, matches each to the address the configuration gives it on the same five fields `make moves` uses, and writes `imports.tf`. It reports live records the configuration does not describe, configured records that do not exist yet, refuses two live copies of one record, and skips what is already in state. 31 cases over `STATE_JSON_FILE` / `PLAN_JSON_FILE` / `LIVE_JSON_FILE` fixtures, in the `Script logic` job; 14 mutations, all red
@@ -227,7 +231,8 @@ Configuration syntax is unchanged — existing `variables.auto.tfvars` files kee
 - Pre-commit hooks: `terraform_fmt`, `terraform_validate`, `terraform_tflint`, `terragrunt_fmt`, shellcheck
 - `CODEOWNERS` for required reviews on infrastructure changes
 
-[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.8.0...HEAD
+[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.9.0...HEAD
+[2.9.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.8.0...v2.9.0
 [2.8.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.7.1...v2.8.0
 [2.7.1]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.7.0...v2.7.1
 [2.7.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.6.0...v2.7.0
