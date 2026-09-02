@@ -113,6 +113,25 @@ check "and the apex FQDN matches @, so nothing is left unmanaged"       "no"  "$
 teardown
 
 setup
+live_record "$DOMAIN" rec1 TXT "$DOMAIN" '"v=spf1 include:icloud.com ~all"'
+live_record "$DOMAIN" rec2 TXT "google._domainkey.${DOMAIN}" '"v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEF" "GHIJKLMNOPQRSTUVWXYZ0123456789"'
+desired "acme-corp.io__txt__@__9b8c7d6e5f4a" TXT "@" "v=spf1 include:icloud.com ~all"
+desired "acme-corp.io__txt__google._domainkey__abcdefabcdef" TXT "google._domainkey" "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+run_imports
+check "a TXT record Cloudflare returns quoted matches its bare value"    "yes" "$(imports_id "${ZONE_ID}/rec1")"
+check "a long TXT returned as quoted chunks matches too"                "yes" "$(imports_id "${ZONE_ID}/rec2")"
+check "so no TXT is left unmanaged"                                     "no"  "$(output_has 'unmanaged')"
+check "and none is about to be created"                                 "no"  "$(output_has 'will be created')"
+teardown
+
+setup
+live_record "$DOMAIN" rec1 A "api.${DOMAIN}" '"203.0.113.10"'
+desired "acme-corp.io__a__api__3f2a9c1b0e7d" A api 203.0.113.10
+run_imports
+check "quotes are only stripped for TXT, not for other types"           "1"   "$(import_blocks)"
+teardown
+
+setup
 live_record "$DOMAIN" rec1 MX "$DOMAIN" mx01.mail.icloud.com 10
 live_record "$DOMAIN" rec2 MX "$DOMAIN" mx02.mail.icloud.com 10
 desired "acme-corp.io__mx__@__aaaaaaaaaaaa" MX "@" mx01.mail.icloud.com 10

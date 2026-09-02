@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **No TXT record could ever match itself in `make moves` or `make imports`.** Cloudflare returns TXT content quoted — `"v=spf1 include:icloud.com ~all"` — and splits long values into quoted 255-character chunks, while the configuration holds the bare string. Both matchers compared the two forms literally, so every SPF, DKIM and verification record on a live zone would have been reported as unmanaged and about to be created, and the first apply would have tried to create duplicates of the records that carry the domain's mail. Found on the first real zone snapshot, not by a test: the fixtures had been written the way the configuration looks, not the way Cloudflare answers. TXT content is now compared in its bare form on both sides; other types are compared as they are
+- The fixtures now carry Cloudflare's quoting — three cases in the import suite and one in the moved-block suite, including a DKIM key returned as two chunks
+
 ## [2.9.0] - 2026-09-02
 
 Built for one domain that serves mail today. Adopting it needs every live record imported under the address the module gives it, before an apply that would otherwise try to recreate them; `make imports` does that, and the import step no longer claims the records will sort themselves out.

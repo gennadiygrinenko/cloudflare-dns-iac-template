@@ -116,6 +116,13 @@ check "and not onto the regular one"                        "no"  "$(moves_to 'c
 teardown
 
 setup
+in_state 'module.dns_zone.cloudflare_dns_record.txt["acme-corp.io__txt__@__spf"]' TXT "$DOMAIN" '"v=spf1 include:icloud.com ~all"'
+desired "acme-corp.io__txt__@__9b8c7d6e5f4a" TXT "@" "v=spf1 include:icloud.com ~all"
+run_moves
+check "a TXT record the provider stores quoted still matches its value" "1"   "$(moved_blocks)"
+teardown
+
+setup
 in_state 'module.dns_zone.cloudflare_dns_record.this["old-apex"]' A "$DOMAIN" 203.0.113.10
 desired "acme-corp.io__a__@__1a2b3c4d5e6f" A "@" 203.0.113.10
 run_moves
