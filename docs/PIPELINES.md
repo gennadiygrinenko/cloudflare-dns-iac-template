@@ -9,7 +9,7 @@ what is and is not covered by tests is the last section there.
 
 | Workflow | Trigger | Gate |
 | --- | --- | --- |
-| **Validate** | pull request to `main` | Seven jobs plus `Validate complete`, which fails if any of them did. That aggregator is the required check, so a skipped or cancelled job cannot pass as success |
+| **Validate** | pull request to `main` | Seven jobs plus `Validate complete`, the single required check. Five of them must report exactly `success`, so a skipped or cancelled job fails the gate rather than passing as one; the per-zone `validate` job is required only when `Detect changed zones` reports `any_changes=true`, which is how a docs-only pull request passes with an empty zone matrix |
 | **Deploy** | push to `main` | `Preflight` checks all four credentials are present and skips plan and apply outright when they are not. Apply additionally waits on the `production` environment's reviewers |
 | **Security** | pull request, push to `main`, monthly | Trivy misconfiguration scan over `terraform/**` and the workflows |
 | **State Operations** | `workflow_dispatch` only | One of `import-domain`, `remove-domain`, `move-domain`, per zone and domain. Never automatic: these rewrite state and have no undo |
