@@ -1,48 +1,24 @@
 name: Set up IaC tooling
 description: >
-  Install the pinned Terraform, optionally Terragrunt, and restore the provider
-  plugin cache. The two versions are declared here and nowhere else, so four
-  workflows can no longer drift apart from one another.
+  Install the tools pinned in mise.toml — Terraform, Terragrunt, tflint,
+  pre-commit and the rest — and restore the provider plugin cache. Versions are
+  declared in that one file and nowhere else, so a laptop and every workflow
+  run the same builds.
 
 inputs:
-  terraform-version:
-    description: Terraform to install. The pin lives here; callers should not pass it.
-    required: false
-    default: "1.16.0"
-  terragrunt-version:
-    description: Terragrunt to install. The pin lives here; callers should not pass it.
-    required: false
-    default: "1.1.4"
-  terragrunt:
-    description: Install Terragrunt as well. Set to false for jobs that only run Terraform.
-    required: false
-    default: "true"
   cache-key-files:
     description: Glob whose hash keys the plugin cache.
     required: false
     default: "**/versions.tf"
 
-outputs:
-  terraform-version:
-    description: The Terraform version that was installed.
-    value: ${{ inputs.terraform-version }}
-  terragrunt-version:
-    description: The Terragrunt version that was installed, empty when it was skipped.
-    value: ${{ inputs.terragrunt == 'true' && inputs.terragrunt-version || '' }}
-
 runs:
   using: composite
   steps:
-    - name: Setup Terraform ${{ inputs.terraform-version }}
-      uses: hashicorp/setup-terraform@v4
+    - name: Install the tools pinned in mise.toml
+      uses: jdx/mise-action@v2
       with:
-        terraform_version: ${{ inputs.terraform-version }}
-        terraform_wrapper: false
-
-    - name: Install Terragrunt ${{ inputs.terragrunt-version }}
-      if: inputs.terragrunt == 'true'
-      shell: bash
-      run: bash "${GITHUB_ACTION_PATH}/../../scripts/install-terragrunt.sh" "${{ inputs.terragrunt-version }}"
+        install: true
+        cache: true
 
     # Exported so later steps in the calling job can still mkdir it, as they
     # did when every workflow declared it for itself.
@@ -54,5 +30,5 @@ runs:
       uses: actions/cache@v6
       with:
         path: ${{ github.workspace }}/.terraform-plugin-cache
-        key: tf-plugins-${{ inputs.terraform-version }}-${{ hashFiles(inputs.cache-key-files) }}
-        restore-keys: tf-plugins-${{ inputs.terraform-version }}-
+        key: tf-plugins-${{ hashFiles('mise.toml') }}-${{ hashFiles(inputs.cache-key-files) }}
+        restore-keys: tf-plugins-${{ hashFiles('mise.toml') }}-

@@ -33,6 +33,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Installs the current pins, and with them `mise` itself, which the
+      # refresh uses to resolve the newest release of each tool.
+      - name: Set up IaC tooling
+        uses: ./.github/actions/setup-iac
+
       - name: Move pins to the newest releases
         id: refresh
         env:
@@ -42,15 +47,11 @@ jobs:
       # A tool bump that nobody runs is how a broken pin reaches main. Pull
       # requests opened with GITHUB_TOKEN do not start workflows, so the new
       # versions are exercised here instead — the same reasoning the provider
-      # lock refresh applies to its zones.
-      # The only caller that passes versions: it installs what it just resolved,
-      # not the pins, because the pins are what it is proposing to change.
-      - name: Set up IaC tooling
+      # lock refresh applies to its zones. mise.toml was just rewritten, so this
+      # installs what the pull request is about to propose.
+      - name: Install the proposed versions
         if: steps.refresh.outputs.changed == 'true'
-        uses: ./.github/actions/setup-iac
-        with:
-          terraform-version: ${{ steps.refresh.outputs.terraform }}
-          terragrunt-version: ${{ steps.refresh.outputs.terragrunt }}
+        run: mise install
 
       - name: Module tests with the new versions
         if: steps.refresh.outputs.changed == 'true'
@@ -81,7 +82,7 @@ jobs:
           git -c user.name='github-actions[bot]' \
               -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
               checkout -B "$BRANCH"
-          git add .github/workflows
+          git add mise.toml .github/workflows
           git -c user.name='github-actions[bot]' \
               -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
               commit -m "chore(ci): move tool version pins to the newest releases"
@@ -94,7 +95,7 @@ jobs:
           lease=$(git rev-parse --verify --quiet "refs/remotes/origin/$BRANCH" || true)
           git push --force-with-lease="$BRANCH:$lease" origin "$BRANCH"
 
-          body=$(printf '## Tool version refresh\n\n%s\nThese pins are plain env strings, so no Dependabot ecosystem sees them. The module tests and every zone were run against the new versions inside the workflow, since pull requests opened by Actions do not trigger checks.\n\nRead the linked release notes before merging — this workflow only reports that a newer version exists, it cannot tell whether the change is safe.\n' "$SUMMARY")
+          body=$(printf '## Tool version refresh\n\n%s\nNo Dependabot ecosystem reads mise.toml or a workflow env string. The module tests and every zone were run against the new versions inside the workflow, since pull requests opened by Actions do not trigger checks.\n\nRead the linked release notes before merging — this workflow only reports that a newer version exists, it cannot tell whether the change is safe.\n' "$SUMMARY")
 
           # Ask whether the pull request exists rather than letting a failed
           # create fall through to edit, which reports a missing pull request

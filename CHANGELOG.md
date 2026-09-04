@@ -8,9 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- **Tool versions are declared in `mise.toml`**, and nowhere else. `mise install` gives a laptop the exact Terraform, Terragrunt, tflint, pre-commit, shellcheck and jq that CI runs; the `setup-iac` action installs from the same file through `jdx/mise-action`, replacing `hashicorp/setup-terraform`, `terraform-linters/setup-tflint`, `actions/setup-python` + `pip install pre-commit`, and the hand-written `install-terragrunt.sh`. `TFLINT_VERSION` and `PRE_COMMIT_VERSION` leave the workflows. The Version pins check now enforces the single source — a workflow that pins one of these tools, a version default on the action, a missing or floating pin in `mise.toml` — and the Tool versions workflow bumps `mise.toml` with `mise latest` instead of rewriting action defaults. Trivy stays a workflow env pin, since its scanning action installs it
+
 - **State moves from Terraform Cloud to a Cloudflare R2 bucket**, through Terraform's S3 backend. GitHub has no built-in state store, and R2 keeps the state with the vendor the repository already manages, S3-compatible, on a free tier — one vendor fewer. One object per zone, `zones/<zone>/terraform.tfstate`, locked with the backend's native lock file. The GitHub configuration changes: `TF_API_TOKEN` and `TF_CLOUD_ORGANIZATION` are gone; `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` (secrets) and `R2_BUCKET` (variable) take their place, and `Preflight` checks for all five. Zone directories lose their `TF_WORKSPACE` block: `terragrunt.hcl` is now two `include` blocks. Anyone with existing Terraform Cloud state migrates it with `terraform init -migrate-state` after setting the new variables; this repository had none
 - The workflows no longer request `id-token: write`, which was reserved for a Terraform Cloud OIDC feature that no longer applies
 
+
+### Added
+
+- Fixture suites for the two scripts that keep versions honest, both previously on the "exercised by hand" list: 19 cases for `check-version-pins.sh` (every rule, each failure naming its file) and 16 for `refresh-tools.sh` with `mise` and `gh` stubbed (the rewrite hits only its line, keeps a `v` prefix, sorts by version not by date, ignores pre-releases, and runs the pins check on the result). Mutation-tested: 15 faults, all red
 
 ### Fixed
 
