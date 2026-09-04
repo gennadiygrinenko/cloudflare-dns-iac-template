@@ -102,6 +102,11 @@ jobs:
           mkdir -p "$TF_PLUGIN_CACHE_DIR"
           bash .github/scripts/plan-record-imports.sh "${{ inputs.zone }}"
 
+      # Neither file is secret: the zone ID and record IDs are identifiers, not
+      # credentials. Seeing what was generated is how a refusal gets explained.
+      - name: Show the generated import blocks
+        run: cat "${ZONE_DIR}/imports.tf" 2>/dev/null || echo "(no imports.tf — nothing left to import)"
+
       - name: Plan
         run: bash .github/scripts/plan-zone.sh "$ZONE_DIR"
 
@@ -120,13 +125,17 @@ jobs:
             echo "**Plan only.** Read the table above; if it is imports and same-value settings and nothing else, run this workflow again with **apply** checked." >>"$GITHUB_STEP_SUMMARY"
           fi
 
+      # Uploaded even when the guard refuses: a refusal without the plan JSON
+      # and the import blocks behind it cannot be diagnosed.
       - name: Upload the adoption plan
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: adopt-${{ inputs.zone }}-${{ github.run_id }}
           path: |
             ${{ env.ZONE_DIR }}/tfplan
             ${{ env.ZONE_DIR }}/imports.tf
+            ${{ env.ZONE_DIR }}/plan.json
           retention-days: 1
           if-no-files-found: error
 
