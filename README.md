@@ -32,8 +32,9 @@ It is aimed at whoever owns a handful to a few dozen domains: an in-house platfo
 
 | Tool | Version |
 |---|---|
-| Terraform | >= 1.9 (CI pins an exact version in the workflows) |
-| Terragrunt | >= 1.0 (CI pins an exact version in the workflows) |
+| Terraform | pinned in `mise.toml` (module accepts >= 1.9) |
+| Terragrunt | pinned in `mise.toml` (1.x — the CLI renamed its flags in 1.0) |
+| tflint, pre-commit, shellcheck, jq | pinned in `mise.toml` |
 | Cloudflare provider | ~> 5.0 (exact build pinned in each zone's `.terraform.lock.hcl`) |
 | GitHub Actions | — |
 | Cloudflare R2 (state) | free tier, S3-compatible |
@@ -50,7 +51,6 @@ It is aimed at whoever owns a handful to a few dozen domains: an in-house platfo
 │   │   ├── common.sh             # Shared logging utilities (log_info, log_success, etc.)
 │   │   ├── detect-zones.sh       # Detect changed/all zones for CI matrix
 │   │   ├── dmarc-checklist.sh    # DMARC authorizations we cannot publish ourselves
-│   │   ├── install-terragrunt.sh # Install Terragrunt in CI
 │   │   ├── apply-zone.sh         # Apply the plan a zone's plan step left behind
 │   │   ├── plan-state-moves.sh   # Generate moved.tf for records whose address changed
 │   │   ├── plan-zone.sh          # Plan one zone, leaving a plan file or a marker
@@ -78,6 +78,7 @@ It is aimed at whoever owns a handful to a few dozen domains: an in-house platfo
 │       │   ├── terragrunt.hcl
 │       │   └── variables.auto.tfvars
 │       └── example/              # Minimal zone example
+├── mise.toml                     # Tool versions — the one place they are declared
 └── terraform/modules/dns-zone/   # Reusable Terraform module
     ├── main.tf
     ├── variables.tf
@@ -336,8 +337,10 @@ Use the **State Operations** workflow in the GitHub Actions UI:
 ## Local development
 
 ```bash
-# Install dependencies (Terragrunt 1.0+ — the CLI renamed its flags in 1.0)
-brew install terraform terragrunt pre-commit tflint
+# Install the exact tool versions CI runs (mise reads mise.toml)
+brew install mise
+mise install
+# Without mise: install the versions listed in mise.toml by hand.
 
 # Set environment variables
 export CLOUDFLARE_API_TOKEN=your-token

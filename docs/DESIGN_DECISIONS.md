@@ -63,6 +63,14 @@ The module directory deliberately has no lock. Lock files belong to root modules
 
 Keeping the lock current is split between two mechanisms, because neither covers both halves. Dependabot owns the constraint in `versions.tf` and will propose `~> 6.0` when a major appears; it will not move the lock from 5.23.0 to 5.24.0, since it only rewrites a lock as a side effect of changing a manifest, and nothing in the manifest changes. The monthly `Provider lock` workflow owns that half: it runs `init -upgrade` plus `providers lock` per zone and opens a pull request when the resolved build moves. Monthly rather than weekly on purpose — a provider patch that lands seven days earlier changes nothing here, while action deprecations do have a deadline, which is why Dependabot stays weekly. It also validates the zones itself, because pull requests opened with `GITHUB_TOKEN` do not trigger workflows and an unchecked lock bump is exactly the change you want checked.
 
+## Tool versions live in `mise.toml`
+
+Terraform, Terragrunt, tflint, pre-commit, shellcheck and jq are pinned in one file at the repository root, and that file is read by two consumers: `mise install` on a laptop and the `setup-iac` action on every job, through `jdx/mise-action`. This is the third home the pins have had. They began as env strings in four workflows, where Terragrunt 1.1.4 sat unnoticed for two weeks and then had to be edited in four places by hand; they moved to input defaults on one action in 2.6.0, which fixed the drift between workflows but left laptops running whatever `brew` had installed. A version that differs between a laptop and CI is a difference nobody sees until a plan disagrees.
+
+Two things keep it one place. The Version pins check fails a workflow that declares `TERRAFORM_VERSION`, `TFLINT_VERSION` or any other key the file owns, fails the action if it grows a version default again, and requires exact `X.Y.Z` pins — `latest` in `mise.toml` would let laptops and CI drift by the day. And since no Dependabot ecosystem reads `mise.toml`, the monthly Tool versions workflow moves the pins to the newest releases with `mise latest` and opens a pull request, exercising the new versions inside the workflow because a pull request opened with `GITHUB_TOKEN` starts none. Trivy is the one exception: its scanning action installs it from a workflow env, which the same check keeps consistent and the same refresh keeps current.
+
+Both scripts behind this — the check and the refresh — were on the "exercised by hand" list until this change; they have fixture suites now, 19 and 16 cases, with mutations for every rule.
+
 ## What is verified, and what is not
 
 Worth stating plainly, because the gap is not obvious from a green badge.

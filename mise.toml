@@ -1,0 +1,13 @@
+# Tool versions, declared once. `mise install` gives a laptop exactly what CI
+# runs; the setup-iac action installs from this file on every job. Nothing
+# else in the repository may pin these tools — the Version pins check fails a
+# workflow that tries. The Tool versions workflow moves them to newer releases
+# monthly and opens a pull request, since no Dependabot ecosystem reads this
+# file.
+[tools]
+terraform  = "1.16.0"
+terragrunt = "1.1.4"
+tflint     = "0.64.0"
+pre-commit = "4.6.2"
+shellcheck = "0.10.0"
+jq         = "1.8.1"

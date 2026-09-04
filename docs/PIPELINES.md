@@ -14,7 +14,7 @@ what is and is not covered by tests is the last section there.
 | **Security** | pull request, push to `main`, monthly | Trivy misconfiguration scan over `terraform/**` and the workflows |
 | **State Operations** | `workflow_dispatch` only | One of `import-domain`, `remove-domain`, `move-domain`, per zone and domain. Never automatic: these rewrite state and have no undo |
 | **Provider lock** | monthly, or manual | Opens a pull request when `init -upgrade` resolves a newer provider build, and validates the zones itself — a `GITHUB_TOKEN` pull request triggers no workflows |
-| **Tool versions** | monthly, or manual | Same shape, for the Terraform and Terragrunt versions pinned in the `setup-iac` action |
+| **Tool versions** | monthly, or manual | Same shape, for every tool pinned in `mise.toml` (resolved with `mise latest`) and the Trivy version in `security.yml`; the pins check runs on the result before a pull request is opened |
 
 ## What a zone directory is made of
 
@@ -88,7 +88,8 @@ the same zone at once.
 Validate covers the module's logic, each zone's configuration, the decision
 logic of the plan, apply and state-operation scripts, the moved-block
 generator behind `make moves`, the import-block generator behind `make imports`,
-the zone detection that builds both matrices, and the workflows' version pins. It does not cover `terragrunt apply`, which has never run in this
+the zone detection that builds both matrices, the version-pin rules and the
+tool refresh that rewrites `mise.toml`. It does not cover `terragrunt apply`, which has never run in this
 repository — the plan and apply steps of Deploy, the artifact hand-off and the
 environment approval are only exercised by a push to `main` with credentials
 present.
