@@ -59,6 +59,11 @@ jobs:
           terraform -chdir=terraform/modules/dns-zone init -backend=false -input=false
           terraform -chdir=terraform/modules/dns-zone test
 
+      # The check that keeps a Terraform which drops import blocks out of the pin.
+      - name: Terraform honours every import block
+        if: steps.refresh.outputs.changed == 'true'
+        run: bash .github/scripts/tests/terraform-import-blocks.sh
+
       - name: Validate zones with the new versions
         if: steps.refresh.outputs.changed == 'true'
         env:
