@@ -20,8 +20,9 @@ permissions:
 
 jobs:
   # ── Tool version pins ────────────────────────────────────────────────────
-  # The pins below are plain env strings repeated across four workflows, which
-  # Dependabot cannot see and no job notices when a bump misses one of them.
+  # Tool versions live in mise.toml and nowhere else. A workflow that pins one
+  # again would win for its own jobs and drift away unnoticed, so this fails
+  # on any second declaration, and on a mise.toml that is missing or floating.
   version-pins:
     name: Version pins
     runs-on: ubuntu-24.04
