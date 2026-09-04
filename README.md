@@ -326,20 +326,22 @@ Use the **State Operations** workflow in the GitHub Actions UI:
 
 ### Bringing an existing zone under management
 
-`import-domain` adopts the zone only. Its records already exist in Cloudflare, so an apply that tried to create them would be rejected as duplicates — and on a domain that serves mail, the apply is the last place to discover a difference between the configuration and the live zone.
+`import-domain` adopts the zone only. Its records already exist in Cloudflare, so an apply that tried to create them would be rejected as duplicates — and on a domain that serves mail, the apply is the last place to discover a difference between the configuration and the live zone. The **Adopt zone** workflow does the whole adoption behind one gate:
 
-1. Describe the domain in `variables.auto.tfvars` **as it is today**: every record, and `settings` set to the zone's current values, since the module otherwise applies its own defaults.
-2. `make import zone=<zone> domain=<domain>` — the zone.
-3. `make imports zone=<zone>` — reads the live records, matches each to the address the configuration gives it, and writes `imports.tf`. Records it cannot match are listed: live ones stay unmanaged, configured ones will be created. Both lists should be empty before you go on.
-4. `make plan zone=<zone>` — every record shows as *will be imported* and nothing shows as changed, destroyed or replaced. If it does, fix the configuration, not the plan.
-5. Apply, then delete `imports.tf`.
+1. On a branch, describe the domain in `variables.auto.tfvars` **as it is today**: every record, and `settings` set to the zone's current values, since the module otherwise applies its own defaults. Open the pull request; Validate checks the configuration.
+2. **Actions → Adopt zone → Run workflow**, choosing that branch, with the zone directory and the domain. The workflow imports the zone, generates `import` blocks for every live record, plans, and then refuses to continue unless the plan contains imports only — plus zone settings written with the value they already have. A record that would be created, changed, replaced or deleted fails the run and is named; fix the configuration, not the plan.
+3. Approve the `production` environment. The apply imports everything; the run summary lists what state now holds.
+4. Merge the branch. Deploy plans **no changes** for the zone.
+
+`imports.tf` is generated on the runner and never enters the repository. The same steps run locally as `make import`, `make imports`, `make plan` — with `TG_BACKEND=local` if you want a throwaway state — but the workflow is the path that carries the guard and the approval.
 
 ## Local development
 
 ```bash
 # Install the exact tool versions CI runs (mise reads mise.toml)
 brew install mise
-mise install
+mise install          # asks once to trust mise.toml; then `terraform version` in this
+                      # directory is CI's version, and brew's again outside it
 # Without mise: install the versions listed in mise.toml by hand.
 
 # Set environment variables

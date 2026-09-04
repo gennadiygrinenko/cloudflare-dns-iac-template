@@ -93,6 +93,9 @@ jobs:
       - name: Test the tool refresh
         run: bash .github/scripts/tests/refresh-tools-logic.sh
 
+      - name: Test the adoption-plan guard
+        run: bash .github/scripts/tests/adoption-plan-logic.sh
+
   # ── Detect which zones actually changed ──────────────────────────────────
   detect-zones:
     name: Detect changed zones

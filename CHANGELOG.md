@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **Adopt zone workflow** (`workflow_dispatch`: zone, domain). Brings a zone that already exists in Cloudflare under management in one run: imports the zone, generates `import` blocks for every live record with `make imports`, plans, and then a guard reads the plan and refuses to go on unless it contains imports and zone settings written with their current value only — a record that would be created, changed, replaced or deleted fails the run by address. Apply sits behind the `production` environment, reusing the plan and apply scripts Deploy uses. `imports.tf` travels as an artifact and never enters the repository. Meant to run from the branch holding the mirror configuration, before it merges, so Deploy then finds no changes. The guard has 21 fixture cases and runs in `Script logic`
 - Fixture suites for the two scripts that keep versions honest, both previously on the "exercised by hand" list: 19 cases for `check-version-pins.sh` (every rule, each failure naming its file) and 16 for `refresh-tools.sh` with `mise` and `gh` stubbed (the rewrite hits only its line, keeps a `v` prefix, sorts by version not by date, ignores pre-releases, and runs the pins check on the result). Mutation-tested: 15 faults, all red
 
 ### Fixed
