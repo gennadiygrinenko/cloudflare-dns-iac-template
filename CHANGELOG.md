@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Adopt zone runs twice by design.** A new `apply` input, off by default: the first run imports the zone into state, plans, runs the guard and stops, so the plan can be read; the second run, with `apply` on, repeats that and applies. Found by following the README's own Quick start into a private repository: GitHub Free allows no environment protection and no branch protection on private repositories (creating the `production` rule fails with HTTP 422), so `environment: production` paused nothing there. The environment stays on the apply job for plans that support it; the flag is the gate that needs no plan feature. README says so
+
 ### Added
 
 - **`gitleaks` in the hygiene hooks**, pinned in `mise.toml` and run over the whole tree by pre-commit, locally and in the `File hygiene` job. The repository is public and its credentials live in GitHub Secrets; that pair is safe only while no secret is ever committed, and `detect-private-key` cannot tell an API token from a string. Proved on a planted Cloudflare API token and an R2 secret: both caught. `.gitleaks.toml` allowlists the tool caches, whose provider README shows example keys

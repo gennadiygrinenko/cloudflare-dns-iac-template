@@ -123,6 +123,8 @@ In **Settings → Environments → New environment** → name it `production`:
 - Add required reviewers
 - Enable "Required reviewers" protection rule
 
+**On GitHub Free this works for public repositories only.** A private repository on the Free plan gets no environment protection and no branch protection — creating the rule fails with HTTP 422. In that case nothing pauses Deploy between merge and apply, so treat the pull request review as the approval; and Adopt zone keeps its own gate, the `apply` flag, which needs no plan feature.
+
 ### 5. Add your domains
 
 Copy an existing zone directory and edit `variables.auto.tfvars`:
@@ -329,8 +331,8 @@ Use the **State Operations** workflow in the GitHub Actions UI:
 `import-domain` adopts the zone only. Its records already exist in Cloudflare, so an apply that tried to create them would be rejected as duplicates — and on a domain that serves mail, the apply is the last place to discover a difference between the configuration and the live zone. The **Adopt zone** workflow does the whole adoption behind one gate:
 
 1. On a branch, describe the domain in `variables.auto.tfvars` **as it is today**: every record, and `settings` set to the zone's current values, since the module otherwise applies its own defaults. Open the pull request; Validate checks the configuration.
-2. **Actions → Adopt zone → Run workflow**, choosing that branch, with the zone directory and the domain. The workflow imports the zone, generates `import` blocks for every live record, plans, and then refuses to continue unless the plan contains imports only — plus zone settings written with the value they already have. A record that would be created, changed, replaced or deleted fails the run and is named; fix the configuration, not the plan.
-3. Approve the `production` environment. The apply imports everything; the run summary lists what state now holds.
+2. **Actions → Adopt zone → Run workflow**, choosing that branch, with the zone directory and the domain, and **apply** left off. The workflow imports the zone into state, generates `import` blocks for every live record, plans, and then refuses to continue unless the plan contains imports only — plus zone settings written with the value they already have. A record that would be created, changed, replaced or deleted fails the run and is named; fix the configuration, not the plan. Read the summary.
+3. Run it again with **apply** checked. Where your GitHub plan supports environment protection, the `production` reviewers are asked as well. The apply imports everything; the run summary lists what state now holds.
 4. Merge the branch. Deploy plans **no changes** for the zone.
 
 `imports.tf` is generated on the runner and never enters the repository. The same steps run locally as `make import`, `make imports`, `make plan` — with `TG_BACKEND=local` if you want a throwaway state — but the workflow is the path that carries the guard and the approval.
