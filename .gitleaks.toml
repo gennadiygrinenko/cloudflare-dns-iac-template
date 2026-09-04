@@ -1,0 +1,17 @@
+# gitleaks configuration. Rules are the defaults; only paths are tuned.
+#
+# Terraform's provider cache carries the provider's own README, which shows
+# example keys, and Terragrunt's cache holds generated copies of the zone
+# files. Both are gitignored and neither is this repository's content.
+title = "cloudflare-dns-iac-template"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Tool caches, never committed"
+paths = [
+  '''\.terraform/''',
+  '''\.terragrunt-cache/''',
+  '''\.terraform-plugin-cache/''',
+]

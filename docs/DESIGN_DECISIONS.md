@@ -98,4 +98,6 @@ State lives in R2, so no state file or cloud credential is stored in the reposit
 
 This is deliberately not described as OIDC. Neither the Cloudflare provider nor R2 accepts GitHub's OIDC tokens, so claiming keyless authentication would be false — and anyone evaluating this repo will open the workflow and see the secrets. The workflows no longer request `id-token: write`; it was reserved for a Terraform Cloud feature that no longer applies.
 
+The repository is public, so the pair "credentials in GitHub Secrets, configuration in git" holds only while no secret is ever committed. `gitleaks` runs in the hygiene hooks over the whole tree, locally and on every pull request; it was proved against a planted Cloudflare API token and a planted R2 secret before it was trusted.
+
 What is enforced instead: applies run only from `main`, behind a GitHub Environment with required reviewers; state operations run behind the same gate; and PRs from forks get validation without any secrets, which is why the checks that need credentials are scoped to same-repository pull requests.

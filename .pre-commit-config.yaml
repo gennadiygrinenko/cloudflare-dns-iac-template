@@ -31,3 +31,17 @@ repos:
     hooks:
       - id: shellcheck
         args: [--severity=warning]
+
+  # Secret scanner. The public repository plus GitHub Secrets is a safe pair
+  # only while no secret is ever committed; detect-private-key above does not
+  # know an API token from a string. gitleaks comes from mise.toml, and scans
+  # the whole tree so the hygiene job's --all-files run covers history's
+  # blind spots too, not only the staged diff.
+  - repo: local
+    hooks:
+      - id: gitleaks
+        name: gitleaks (no secrets in the tree)
+        entry: gitleaks dir . --redact --no-banner --exit-code 1
+        language: system
+        pass_filenames: false
+        always_run: true

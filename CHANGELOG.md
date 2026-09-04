@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **`gitleaks` in the hygiene hooks**, pinned in `mise.toml` and run over the whole tree by pre-commit, locally and in the `File hygiene` job. The repository is public and its credentials live in GitHub Secrets; that pair is safe only while no secret is ever committed, and `detect-private-key` cannot tell an API token from a string. Proved on a planted Cloudflare API token and an R2 secret: both caught. `.gitleaks.toml` allowlists the tool caches, whose provider README shows example keys
+
 ### Changed
 
 - **Tool versions are declared in `mise.toml`**, and nowhere else. `mise install` gives a laptop the exact Terraform, Terragrunt, tflint, pre-commit, shellcheck and jq that CI runs; the `setup-iac` action installs from the same file through `jdx/mise-action`, replacing `hashicorp/setup-terraform`, `terraform-linters/setup-tflint`, `actions/setup-python` + `pip install pre-commit`, and the hand-written `install-terragrunt.sh`. `TFLINT_VERSION` and `PRE_COMMIT_VERSION` leave the workflows. The Version pins check now enforces the single source — a workflow that pins one of these tools, a version default on the action, a missing or floating pin in `mise.toml` — and the Tool versions workflow bumps `mise.toml` with `mise latest` instead of rewriting action defaults. Trivy stays a workflow env pin, since its scanning action installs it
