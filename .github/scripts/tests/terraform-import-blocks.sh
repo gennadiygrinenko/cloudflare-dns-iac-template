@@ -24,6 +24,11 @@ check() {
   fi
 }
 
+# The work dir is outside the repository, so a mise shim there has no
+# mise.toml to read a version from. Resolve the real binary first.
+TF="$(mise which terraform 2>/dev/null || command -v terraform)"
+[ -n "$TF" ] || { echo "terraform not found on PATH"; exit 1; }
+
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 mkdir -p "${WORK}/mod"
@@ -70,12 +75,12 @@ import {
 }
 TF
 
-echo "terraform $(terraform version -json | jq -r .terraform_version): import blocks"
+echo "terraform $("$TF" version -json | jq -r .terraform_version): import blocks"
 
-cd "$WORK"
-terraform init -input=false >init.log 2>&1 || { cat init.log; echo "init failed"; exit 1; }
-terraform plan -out=tfplan -input=false >plan.log 2>&1 || { cat plan.log; echo "plan failed"; exit 1; }
-terraform show -json tfplan >plan.json
+cd "$WORK" || exit 1
+"$TF" init -input=false >init.log 2>&1 || { cat init.log; echo "init failed"; exit 1; }
+"$TF" plan -out=tfplan -input=false >plan.log 2>&1 || { cat plan.log; echo "plan failed"; exit 1; }
+"$TF" show -json tfplan >plan.json
 
 imports="$(jq '[.resource_changes[] | select(.change.importing != null)] | length' plan.json)"
 creates="$(jq '[.resource_changes[] | select(.change.actions == ["create"])] | length' plan.json)"
