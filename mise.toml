@@ -5,7 +5,11 @@
 # monthly and opens a pull request, since no Dependabot ecosystem reads this
 # file.
 [tools]
-terraform  = "1.16.0"
+# Not 1.16.0: it honours only the first of several import blocks aimed at one
+# for_each resource and plans the rest as create, silently. Found on the first
+# real zone adoption; .github/scripts/tests/terraform-import-blocks.sh proves
+# it and gates every version the Tool versions workflow proposes.
+terraform  = "1.15.9"
 terragrunt = "1.1.4"
 tflint     = "0.64.0"
 pre-commit = "4.6.2"

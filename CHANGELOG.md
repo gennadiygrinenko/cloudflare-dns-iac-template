@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Terraform pinned to 1.15.9; 1.16.0 drops import blocks silently.** With several `import` blocks aimed at instances of one `for_each` resource, Terraform 1.16.0 imports the first and plans the rest as `create` — no error, no `action_reason`, the provider is never asked about them. Found on the first real adoption of a live zone: `make imports` wrote eight correct blocks, the plan showed `2 to import, 17 to add`, and the adoption guard refused. Reproduced with three `random_id` instances on 1.16.0 (`1 to import, 2 to add`) against 1.15.9 and 1.14.3 (`3 to import`). The pin moves to 1.15.9, and `terraform-import-blocks.sh` — a plan-only reproduction, no account needed — runs in `Module tests` and against every version the Tool versions workflow proposes, so a return to a broken release goes red instead of quietly recreating records
+
 ### Changed
 
 - **Adopt zone runs twice by design.** A new `apply` input, off by default: the first run imports the zone into state, plans, runs the guard and stops, so the plan can be read; the second run, with `apply` on, repeats that and applies. Found by following the README's own Quick start into a private repository: GitHub Free allows no environment protection and no branch protection on private repositories (creating the `production` rule fails with HTTP 422), so `environment: production` paused nothing there. The environment stays on the apply job for plans that support it; the flag is the gate that needs no plan feature. README says so

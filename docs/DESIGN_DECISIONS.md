@@ -71,6 +71,8 @@ Two things keep it one place. The Version pins check fails a workflow that decla
 
 Both scripts behind this — the check and the refresh — were on the "exercised by hand" list until this change; they have fixture suites now, 19 and 16 cases, with mutations for every rule.
 
+The pin is also where a broken release gets stopped. Terraform 1.16.0 honours only the first of several `import` blocks aimed at one `for_each` resource and plans the rest as create, with no error and no `action_reason`; the first real zone adoption would have recreated six of eight live records over themselves, and only the adoption guard stood in the way. `terraform-import-blocks.sh` reproduces that in a plan with three `random_id` instances and runs both on every pull request and against every version the Tool versions workflow proposes — so the pin cannot move back onto a release that drops imports.
+
 ## What is verified, and what is not
 
 Worth stating plainly, because the gap is not obvious from a green badge.
