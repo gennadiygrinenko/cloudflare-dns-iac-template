@@ -3,6 +3,9 @@ name: Deploy
 on:
   push:
     branches: [main]
+  # Manual run of the same plan → approval → apply, for a repository whose
+  # pushes do not start workflows, or to re-deploy main without a new commit.
+  workflow_dispatch:
 
 permissions:
   contents: read
