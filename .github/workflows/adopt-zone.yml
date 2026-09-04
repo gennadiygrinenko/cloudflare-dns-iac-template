@@ -8,6 +8,13 @@ name: Adopt zone
 #
 # Nothing here is written back to the repository. imports.tf is generated on
 # the runner, travels to the apply job as an artifact, and dies with it.
+#
+# Two runs by design. The first, with `apply` off, imports the zone into state,
+# plans, runs the guard and stops; its summary is the thing to read. The second,
+# with `apply` on, repeats that and applies. The `production` environment is
+# still declared on the apply job, so where the GitHub plan supports required
+# reviewers it pauses there too — but on GitHub Free, private repositories get
+# no environment protection at all, and the flag is the only gate.
 
 on:
   workflow_dispatch:
@@ -20,6 +27,11 @@ on:
         description: "Domain to adopt, e.g. aismbtools.com — must be described in that zone's variables.auto.tfvars"
         required: true
         type: string
+      apply:
+        description: "Apply the adoption. Leave off for the first run: it imports into state, plans, runs the guard and stops, so the plan can be read before anything is applied."
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -100,6 +112,14 @@ jobs:
           (cd "$ZONE_DIR" && terragrunt run --log-disable -- show -json "${PWD}/tfplan" >"${PWD}/plan.json")
           bash .github/scripts/check-adoption-plan.sh "${ZONE_DIR}/plan.json"
 
+      - name: Say what happens next
+        run: |
+          if [ "${{ inputs.apply }}" = "true" ]; then
+            echo "Applying in the next job." >>"$GITHUB_STEP_SUMMARY"
+          else
+            echo "**Plan only.** Read the table above; if it is imports and same-value settings and nothing else, run this workflow again with **apply** checked." >>"$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Upload the adoption plan
         uses: actions/upload-artifact@v7
         with:
@@ -114,6 +134,7 @@ jobs:
   apply:
     name: Apply — ${{ inputs.domain }} (${{ inputs.zone }})
     needs: plan
+    if: inputs.apply
     runs-on: ubuntu-24.04
     environment: production # required reviewers configured in GitHub repo settings
     concurrency:
