@@ -1,6 +1,6 @@
 # Pipelines
 
-Six workflows. What each one decides matters more than what it runs, so this
+Seven workflows. What each one decides matters more than what it runs, so this
 page is organised around the gates: the point in each pipeline where it refuses
 to continue, and what would happen if that gate were missing.
 
@@ -12,6 +12,7 @@ what is and is not covered by tests is the last section there.
 | **Validate** | pull request to `main` | Seven jobs plus `Validate complete`, the single required check. Five of them must report exactly `success`, so a skipped or cancelled job fails the gate rather than passing as one; the per-zone `validate` job is required only when `Detect changed zones` reports `any_changes=true`, which is how a docs-only pull request passes with an empty zone matrix |
 | **Deploy** | push to `main` | `Preflight` checks all five credentials and variables are present and skips plan and apply outright when they are not. Apply additionally waits on the `production` environment's reviewers |
 | **Security** | pull request, push to `main`, monthly | Trivy misconfiguration scan over `terraform/**` and the workflows |
+| **Adopt zone** | `workflow_dispatch` only | Imports an existing zone and every live record, then a guard reads the plan and refuses anything but imports and same-value zone settings — a record that would be created, changed or replaced fails the run by address. Apply waits on `production`. Run from the branch holding the mirror configuration, before it merges |
 | **State Operations** | `workflow_dispatch` only | One of `import-domain`, `remove-domain`, `move-domain`, per zone and domain. Never automatic: these rewrite state and have no undo |
 | **Provider lock** | monthly, or manual | Opens a pull request when `init -upgrade` resolves a newer provider build, and validates the zones itself — a `GITHUB_TOKEN` pull request triggers no workflows |
 | **Tool versions** | monthly, or manual | Same shape, for every tool pinned in `mise.toml` (resolved with `mise latest`) and the Trivy version in `security.yml`; the pins check runs on the result before a pull request is opened |
@@ -88,8 +89,9 @@ the same zone at once.
 Validate covers the module's logic, each zone's configuration, the decision
 logic of the plan, apply and state-operation scripts, the moved-block
 generator behind `make moves`, the import-block generator behind `make imports`,
-the zone detection that builds both matrices, the version-pin rules and the
-tool refresh that rewrites `mise.toml`. It does not cover `terragrunt apply`, which has never run in this
+the zone detection that builds both matrices, the version-pin rules, the
+tool refresh that rewrites `mise.toml`, and the guard that decides whether an
+adoption plan may be applied. It does not cover `terragrunt apply`, which has never run in this
 repository — the plan and apply steps of Deploy, the artifact hand-off and the
 environment approval are only exercised by a push to `main` with credentials
 present.

@@ -1,0 +1,160 @@
+name: Adopt zone
+
+# Bring a zone that already exists in Cloudflare under management: import the
+# zone and every live record into state, then apply a plan that is allowed to
+# do nothing else. Run it from the branch that holds the mirror configuration,
+# before that branch merges, so the Deploy that follows the merge finds no
+# changes.
+#
+# Nothing here is written back to the repository. imports.tf is generated on
+# the runner, travels to the apply job as an artifact, and dies with it.
+
+on:
+  workflow_dispatch:
+    inputs:
+      zone:
+        description: "Zone directory under envs/cloudflare/zones/, e.g. aismbtools"
+        required: true
+        type: string
+      domain:
+        description: "Domain to adopt, e.g. aismbtools.com — must be described in that zone's variables.auto.tfvars"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# One state operation per zone at a time, the same group State Operations uses.
+concurrency:
+  group: terraform-state-${{ inputs.zone }}
+  cancel-in-progress: false
+
+jobs:
+  # ── A manual run with no credentials is a mistake, not a fresh fork ──────
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check credentials
+        env:
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          HAS_R2_KEY: ${{ secrets.R2_ACCESS_KEY_ID != '' }}
+          HAS_R2_SECRET: ${{ secrets.R2_SECRET_ACCESS_KEY != '' }}
+          HAS_CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+        run: |
+          missing=""
+          [ -n "$R2_BUCKET" ]             || missing="${missing} vars.R2_BUCKET"
+          [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || missing="${missing} vars.CLOUDFLARE_ACCOUNT_ID"
+          [ "$HAS_R2_KEY" = "true" ]      || missing="${missing} secrets.R2_ACCESS_KEY_ID"
+          [ "$HAS_R2_SECRET" = "true" ]   || missing="${missing} secrets.R2_SECRET_ACCESS_KEY"
+          [ "$HAS_CF_TOKEN" = "true" ]    || missing="${missing} secrets.CLOUDFLARE_API_TOKEN"
+          if [ -n "$missing" ]; then
+            echo "::error::Adopt zone needs all five configured. Missing:${missing}"
+            exit 1
+          fi
+
+  # ── Import into state, then prove the plan only adopts ───────────────────
+  plan:
+    name: Import and plan — ${{ inputs.domain }} (${{ inputs.zone }})
+    needs: preflight
+    runs-on: ubuntu-24.04
+    env:
+      ZONE_DIR: envs/cloudflare/zones/${{ inputs.zone }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET: ${{ vars.R2_BUCKET }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up IaC tooling
+        uses: ./.github/actions/setup-iac
+
+      - name: Check the zone describes the domain
+        run: |
+          source .github/scripts/common.sh
+          [ -d "$ZONE_DIR" ] || error_exit 1 "Zone directory not found: ${ZONE_DIR}"
+          grep -qF "\"${{ inputs.domain }}\"" "${ZONE_DIR}/variables.auto.tfvars" ||
+            error_exit 1 "${{ inputs.domain }} is not described in ${ZONE_DIR}/variables.auto.tfvars — write the mirror first."
+
+      # The zone resource, into state. Idempotent: skipped when already there.
+      - name: Import the zone
+        run: bash .github/scripts/state-ops.sh import-domain "${{ inputs.zone }}" "${{ inputs.domain }}"
+
+      # Every live record, matched to the address the configuration gives it.
+      - name: Generate import blocks for the live records
+        run: |
+          mkdir -p "$TF_PLUGIN_CACHE_DIR"
+          bash .github/scripts/plan-record-imports.sh "${{ inputs.zone }}"
+
+      - name: Plan
+        run: bash .github/scripts/plan-zone.sh "$ZONE_DIR"
+
+      # The gate. Imports and same-value settings pass; anything that would
+      # change a record fails the run before an artifact exists to apply.
+      - name: Refuse anything that is not an adoption
+        run: |
+          (cd "$ZONE_DIR" && terragrunt run --log-disable -- show -json "${PWD}/tfplan" >"${PWD}/plan.json")
+          bash .github/scripts/check-adoption-plan.sh "${ZONE_DIR}/plan.json"
+
+      - name: Upload the adoption plan
+        uses: actions/upload-artifact@v7
+        with:
+          name: adopt-${{ inputs.zone }}-${{ github.run_id }}
+          path: |
+            ${{ env.ZONE_DIR }}/tfplan
+            ${{ env.ZONE_DIR }}/imports.tf
+          retention-days: 1
+          if-no-files-found: error
+
+  # ── Apply behind the same approval Deploy uses ───────────────────────────
+  apply:
+    name: Apply — ${{ inputs.domain }} (${{ inputs.zone }})
+    needs: plan
+    runs-on: ubuntu-24.04
+    environment: production # required reviewers configured in GitHub repo settings
+    concurrency:
+      group: terraform-apply-${{ inputs.zone }}
+      cancel-in-progress: false
+    env:
+      ZONE_DIR: envs/cloudflare/zones/${{ inputs.zone }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET: ${{ vars.R2_BUCKET }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up IaC tooling
+        uses: ./.github/actions/setup-iac
+
+      # The saved plan is only valid against the configuration it was made
+      # from, and that configuration includes imports.tf; both arrive together.
+      - name: Download the adoption plan
+        uses: actions/download-artifact@v8
+        with:
+          name: adopt-${{ inputs.zone }}-${{ github.run_id }}
+          path: ${{ env.ZONE_DIR }}/
+
+      - name: Apply
+        run: |
+          mkdir -p "$TF_PLUGIN_CACHE_DIR"
+          bash .github/scripts/apply-zone.sh "$ZONE_DIR"
+
+      - name: Confirm what state holds now
+        run: |
+          cd "$ZONE_DIR"
+          {
+            echo "### State after adoption — ${{ inputs.domain }}"
+            echo
+            echo '```'
+            terragrunt run --log-disable -- state list
+            echo '```'
+            echo
+            echo "Next: merge the branch. Deploy should then plan **no changes** for ${{ inputs.zone }}."
+          } >>"$GITHUB_STEP_SUMMARY"
