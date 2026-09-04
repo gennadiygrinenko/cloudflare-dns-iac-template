@@ -127,7 +127,12 @@ In **Settings → Environments → New environment** → name it `production`:
 
 ### 5. Add your domains
 
-Copy an existing zone directory and edit `variables.auto.tfvars`:
+Two rules first, both learned the hard way:
+
+- **This template repository must never hold credentials.** Fork or copy it into your own repository — private is fine — and put the secrets there. With credentials present, Deploy treats the example zones like any other and tries to create `acme-corp.io` on the next merge.
+- **Delete the example zones** (`envs/cloudflare/zones/acme`, `example`) in your copy before the credentials go in, for the same reason.
+
+Then copy an existing zone directory and edit `variables.auto.tfvars`:
 
 ```bash
 cp -r envs/cloudflare/zones/example envs/cloudflare/zones/my-company
@@ -138,7 +143,7 @@ cp -r envs/cloudflare/zones/example envs/cloudflare/zones/my-company
 
 Push to a feature branch. The `validate` workflow will run automatically. On merge to `main`, the `deploy` workflow runs plan → waits for approval → applies.
 
-One caveat worth knowing before you rely on it: the apply half of that pipeline has never run against a real Cloudflare account in this repository. Its decision logic is covered by tests, its contact with the provider is not — see [what is verified, and what is not](docs/DESIGN_DECISIONS.md#what-is-verified-and-what-is-not). The workflows themselves, and the gate each one enforces, are in [docs/PIPELINES.md](docs/PIPELINES.md).
+The apply half of that pipeline has run for real once, on 2026-09-04, against a live zone that serves mail: imports only, nothing changed, and a Deploy afterwards planned no changes. What that did and did not prove is in [what is verified, and what is not](docs/DESIGN_DECISIONS.md#what-is-verified-and-what-is-not). The workflows themselves, and the gate each one enforces, are in [docs/PIPELINES.md](docs/PIPELINES.md).
 
 ## Domain configuration reference
 

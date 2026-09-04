@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Verified against a live zone.** In a private instance of this template, Adopt zone imported `aismbtools.com` and its eight records and wrote its eleven settings with their existing values — `8 imported, 11 added, 0 changed, 0 destroyed` — with the zone byte-identical before and after, and Deploy then planned `No changes`. State in R2 with the lock file. The design notes' "not verified" section is rewritten around what that run proved and what it did not
+- Deploy can be run by hand (`workflow_dispatch`): the same plan → approval → apply, for a repository whose pushes start no workflow, or to re-deploy `main` without a new commit
+- README: the template repository must never hold credentials, and an instance deletes the example zones before they go in. Learned the hard way: with the five values present here, Deploy planned `64 to add` for the example zones and attempted to create `acme-corp.io`, stopped only by a token scoped to one zone. The values are gone from this repository and `main` is protected
+
 ### Fixed
 
 - **Terraform pinned to 1.15.9; 1.16.0 drops import blocks silently.** With several `import` blocks aimed at instances of one `for_each` resource, Terraform 1.16.0 imports the first and plans the rest as `create` — no error, no `action_reason`, the provider is never asked about them. Found on the first real adoption of a live zone: `make imports` wrote eight correct blocks, the plan showed `2 to import, 17 to add`, and the adoption guard refused. Reproduced with three `random_id` instances on 1.16.0 (`1 to import, 2 to add`) against 1.15.9 and 1.14.3 (`3 to import`). The pin moves to 1.15.9, and `terraform-import-blocks.sh` — a plan-only reproduction, no account needed — runs in `Module tests` and against every version the Tool versions workflow proposes, so a return to a broken release goes red instead of quietly recreating records

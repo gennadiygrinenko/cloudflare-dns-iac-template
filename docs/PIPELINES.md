@@ -10,7 +10,7 @@ what is and is not covered by tests is the last section there.
 | Workflow | Trigger | Gate |
 | --- | --- | --- |
 | **Validate** | pull request to `main` | Seven jobs plus `Validate complete`, the single required check. Five of them must report exactly `success`, so a skipped or cancelled job fails the gate rather than passing as one; the per-zone `validate` job is required only when `Detect changed zones` reports `any_changes=true`, which is how a docs-only pull request passes with an empty zone matrix |
-| **Deploy** | push to `main` | `Preflight` checks all five credentials and variables are present and skips plan and apply outright when they are not. Apply additionally waits on the `production` environment's reviewers |
+| **Deploy** | push to `main`, or manual | `Preflight` checks all five credentials and variables are present and skips plan and apply outright when they are not. Apply additionally waits on the `production` environment's reviewers |
 | **Security** | pull request, push to `main`, monthly | Trivy misconfiguration scan over `terraform/**` and the workflows |
 | **Adopt zone** | `workflow_dispatch` only | Imports an existing zone and every live record, then a guard reads the plan and refuses anything but imports and same-value zone settings — a record that would be created, changed or replaced fails the run by address. Apply waits on `production`. Run from the branch holding the mirror configuration, before it merges |
 | **State Operations** | `workflow_dispatch` only | One of `import-domain`, `remove-domain`, `move-domain`, per zone and domain. Never automatic: these rewrite state and have no undo |
@@ -94,7 +94,8 @@ tool refresh that rewrites `mise.toml`, and the guard that decides whether an
 adoption plan may be applied. It does not cover `terragrunt apply`, which has never run in this
 repository — the plan and apply steps of Deploy, the artifact hand-off and the
 environment approval are only exercised by a push to `main` with credentials
-present.
+present — which has happened once, in an instance, on 2026-09-04 (see the
+design notes).
 
 `make mutants` is the other half: it breaks the module 49 ways and checks the
 test suite notices. It runs by hand, deliberately — see the design notes.
