@@ -14,7 +14,7 @@ what is and is not covered by tests is the last section there.
 | **Security** | pull request, push to `main`, monthly | Trivy misconfiguration scan over `terraform/**` and the workflows |
 | **Adopt zone** | `workflow_dispatch` only | Imports an existing zone and every live record, then a guard reads the plan and refuses anything but imports and same-value zone settings — a record that would be created, changed or replaced fails the run by address. Apply waits on `production`. Run from the branch holding the mirror configuration, before it merges |
 | **State Operations** | `workflow_dispatch` only | One of `import-domain`, `remove-domain`, `move-domain`, per zone and domain. Never automatic: these rewrite state and have no undo |
-| **Provider lock** | monthly, or manual | Opens a pull request when `init -upgrade` resolves a newer provider build, and validates the zones itself — a `GITHUB_TOKEN` pull request triggers no workflows |
+| **Provider lock** | monthly, or manual | Opens a pull request when `init -upgrade` resolves a newer provider build, and validates the zones itself — a `GITHUB_TOKEN` pull request triggers no workflows. Set the `PROVIDER_LOCK_TOKEN` secret (a PAT) and the pull request gets the normal checks |
 | **Tool versions** | monthly, or manual | Same shape, for every tool pinned in `mise.toml` (resolved with `mise latest`) and the Trivy version in `security.yml`; the pins check runs on the result before a pull request is opened |
 
 ## What a zone directory is made of
