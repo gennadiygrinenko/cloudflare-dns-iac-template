@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **The `Provider lock` pull request can now get the normal checks.** A pull request opened with `GITHUB_TOKEN` starts no workflows, so it carried no checks and, once `main` moved, could not be brought up to date by anyone but a human. With a `PROVIDER_LOCK_TOKEN` secret (a PAT with contents and pull-requests write) the branch is pushed and the pull request opened as that user, and the checks run. Without the secret nothing changes except a warning in the run and a line in the pull request body saying so
+
 ## [2.10.0] - 2026-09-05
 
 The template's apply half has now run for real, once, against a live zone that serves mail — in a private instance, the way the README says to use it — and imported everything without changing anything. Getting there replaced the state backend, moved tool versions into one file, added a secret scanner, built the adoption workflow with its guard, and found a Terraform release that drops import blocks. It also found what happens when a template repository holds real credentials: it tries to apply its examples.

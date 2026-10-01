@@ -28,7 +28,13 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
+      # A push or pull request made with GITHUB_TOKEN starts no workflows, so
+      # the lock PR would sit without checks and could never satisfy branch
+      # protection. PROVIDER_LOCK_TOKEN (a PAT with contents + pull-requests
+      # write) lifts that; without it the run still works, as before.
       - uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.PROVIDER_LOCK_TOKEN || github.token }}
 
       - name: Set up IaC tooling
         uses: ./.github/actions/setup-iac
@@ -57,7 +63,8 @@ jobs:
       - name: Open pull request
         if: steps.refresh.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROVIDER_LOCK_TOKEN || github.token }}
+          HAS_PAT: ${{ secrets.PROVIDER_LOCK_TOKEN != '' }}
           SUMMARY: ${{ steps.refresh.outputs.summary }}
         run: |
           git -c user.name='github-actions[bot]' \
@@ -76,7 +83,13 @@ jobs:
           lease=$(git rev-parse --verify --quiet "refs/remotes/origin/$BRANCH" || true)
           git push --force-with-lease="$BRANCH:$lease" origin "$BRANCH"
 
-          body=$(printf '## Provider lock refresh\n\n%s\nThe `~> 5.0` constraint is unchanged — only the locked build moved. Zones were validated in the workflow run, since pull requests opened by Actions do not trigger checks.\n' "$SUMMARY")
+          if [ "$HAS_PAT" = "true" ]; then
+            note='Zones were validated in the workflow run, and the pull request checks run as usual.'
+          else
+            note='Zones were validated in the workflow run, since pull requests opened by Actions do not trigger checks. Add the PROVIDER_LOCK_TOKEN secret to get the normal checks.'
+            echo "::warning::PROVIDER_LOCK_TOKEN is not set; this pull request will have no checks and will need its branch updated by hand."
+          fi
+          body=$(printf '## Provider lock refresh\n\n%s\nThe `~> 5.0` constraint is unchanged — only the locked build moved. %s\n' "$SUMMARY" "$note")
           # Ask whether the pull request exists rather than letting a failed
           # create fall through to edit: that swallowed the real error and
           # reported "no pull requests found" for every kind of failure.
