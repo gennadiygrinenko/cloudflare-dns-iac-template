@@ -15,7 +15,7 @@ runs:
   using: composite
   steps:
     - name: Install the tools pinned in mise.toml
-      uses: jdx/mise-action@v2
+      uses: jdx/mise-action@v5
       with:
         install: true
         cache: true
