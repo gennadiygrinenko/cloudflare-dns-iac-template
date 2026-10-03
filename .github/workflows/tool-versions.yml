@@ -30,7 +30,15 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
+      # A pull request opened with GITHUB_TOKEN gets its checks held for a
+      # maintainer's approval, so the required Validate check never reports on
+      # its own. PROVIDER_LOCK_TOKEN (the same PAT the provider lock refresh
+      # uses: contents + pull-requests write) opens it as a user instead and the
+      # checks run. It needs no workflows scope: the refresh only edits
+      # mise.toml. Without the secret the run still works, as before.
       - uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.PROVIDER_LOCK_TOKEN || github.token }}
 
       # Installs the current pins, and with them `mise` itself, which the
       # refresh uses to resolve the newest release of each tool.
@@ -80,7 +88,8 @@ jobs:
       - name: Open pull request
         if: steps.refresh.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROVIDER_LOCK_TOKEN || github.token }}
+          HAS_PAT: ${{ secrets.PROVIDER_LOCK_TOKEN != '' }}
           SUMMARY: ${{ steps.refresh.outputs.summary }}
         run: |
           git -c user.name='github-actions[bot]' \
@@ -99,7 +108,13 @@ jobs:
           lease=$(git rev-parse --verify --quiet "refs/remotes/origin/$BRANCH" || true)
           git push --force-with-lease="$BRANCH:$lease" origin "$BRANCH"
 
-          body=$(printf '## Tool version refresh\n\n%s\nNo Dependabot ecosystem reads mise.toml. The module tests and every zone were run against the new versions inside the workflow, since pull requests opened by Actions do not trigger checks.\n\nRead the linked release notes before merging — this workflow only reports that a newer version exists, it cannot tell whether the change is safe.\n' "$SUMMARY")
+          if [ "$HAS_PAT" = "true" ]; then
+            note='The module tests and every zone were run against the new versions inside the workflow, and the pull request checks run as usual.'
+          else
+            note='The module tests and every zone were run against the new versions inside the workflow. Pull requests opened by Actions wait for a maintainer to approve their checks; add the PROVIDER_LOCK_TOKEN secret to get them without that.'
+            echo "::warning::PROVIDER_LOCK_TOKEN is not set; this pull request's checks will wait for approval."
+          fi
+          body=$(printf '## Tool version refresh\n\n%s\nNo Dependabot ecosystem reads mise.toml. %s\n\nRead the linked release notes before merging — this workflow only reports that a newer version exists, it cannot tell whether the change is safe.\n' "$SUMMARY" "$note")
 
           # Ask whether the pull request exists rather than letting a failed
           # create fall through to edit, which reports a missing pull request
