@@ -38,7 +38,7 @@ jobs:
       # Trivy alone, at the version mise.toml pins; the rest of the IaC
       # tooling is not needed for a config scan.
       - name: Install Trivy
-        uses: jdx/mise-action@v2
+        uses: jdx/mise-action@v5
         with:
           install_args: trivy
           cache: true
