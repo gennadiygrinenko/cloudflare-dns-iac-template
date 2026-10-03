@@ -96,6 +96,12 @@ jobs:
       - name: Test the adoption-plan guard
         run: bash .github/scripts/tests/adoption-plan-logic.sh
 
+      - name: Test the provider lock refresh
+        run: bash .github/scripts/tests/refresh-locks-logic.sh
+
+      - name: Test the DMARC checklist
+        run: bash .github/scripts/tests/dmarc-checklist-logic.sh
+
   # ── Detect which zones actually changed ──────────────────────────────────
   detect-zones:
     name: Detect changed zones

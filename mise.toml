@@ -20,3 +20,10 @@ gitleaks   = "8.30.1"
 # because GITHUB_TOKEN may not push edits to .github/workflows/ — the Tool
 # versions refresh failed on exactly that while Trivy lived in a workflow env.
 trivy      = "0.75.0"
+
+[env]
+# Terragrunt prefers OpenTofu when both are on PATH. A laptop with tofu from
+# Homebrew then plans with a different binary than CI, which has none -- and
+# the Terraform pin above, with the import-block test behind it, means nothing
+# there. Name the binary so mise's terraform is the one used everywhere.
+TG_TF_PATH = "terraform"

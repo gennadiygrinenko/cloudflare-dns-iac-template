@@ -44,7 +44,7 @@ mise_pin() {
 known=" ${MISE_TOOLS[*]%%:*} "
 while IFS= read -r tool; do
   case "$known" in *" ${tool} "*) ;; *) error_exit 1 "mise.toml pins ${tool}, which refresh-tools.sh does not know; add it to MISE_TOOLS" ;; esac
-done < <(sed -nE 's/^([A-Za-z0-9_-]+)[[:space:]]*=.*/\1/p' "$MISE")
+done < <(awk '/^\[/ { tools = ($0 == "[tools]") } tools && /^[A-Za-z0-9_-]+[[:space:]]*=/ { sub(/[[:space:]]*=.*/, ""); print }' "$MISE")
 
 for entry in "${MISE_TOOLS[@]}"; do
   tool="${entry%%:*}"; repo="${entry#*:}"
