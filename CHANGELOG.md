@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.12.0] - 2026-10-03
+
+Every script in `.github/scripts` now has a fixture suite, and the last two each turned up a check that reported success without checking. Deploy gained a way to look before it leaps: a plan-only run, and no apply from any branch but `main` — first used on the private instance, where it showed the plan was blocked by an expired Cloudflare token rather than by anything in the configuration, and skipped apply as intended.
+
 ### Added
 
 - **Deploy can plan without applying.** A manual run takes `plan_only`: it plans every zone against real state, shows the plan in the run summary, and skips apply. And apply now runs only from `main`. A private instance on GitHub Free cannot protect the `production` environment, so a manual run on a branch — to see what merging it would do — applied that branch's code with nothing in the way; previewing a template sync meant handing the zone's credentials to a laptop instead
@@ -284,7 +288,8 @@ Configuration syntax is unchanged — existing `variables.auto.tfvars` files kee
 - Pre-commit hooks: `terraform_fmt`, `terraform_validate`, `terraform_tflint`, `terragrunt_fmt`, shellcheck
 - `CODEOWNERS` for required reviews on infrastructure changes
 
-[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.11.0...HEAD
+[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.12.0...HEAD
+[2.12.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.11.0...v2.12.0
 [2.11.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.10.0...v2.11.0
 [2.10.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.9.0...v2.10.0
 [2.9.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.8.0...v2.9.0
