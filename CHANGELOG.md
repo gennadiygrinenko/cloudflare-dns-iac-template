@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **Deploy can plan without applying.** A manual run takes `plan_only`: it plans every zone against real state, shows the plan in the run summary, and skips apply. And apply now runs only from `main`. A private instance on GitHub Free cannot protect the `production` environment, so a manual run on a branch — to see what merging it would do — applied that branch's code with nothing in the way; previewing a template sync meant handing the zone's credentials to a laptop instead
 - Fixture suites for the last two scripts on the "exercised by hand" list: 21 cases for `refresh-locks.sh` (platform hash count, hash-only churn reverted, version moves, a zone with no lock yet, Terragrunt failing) and 21 for `dmarc-checklist.sh` (table rows, delegation warnings, skipped and failed zones). Both run in `Script logic`
 
 ### Fixed
