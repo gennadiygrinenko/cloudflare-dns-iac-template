@@ -77,6 +77,15 @@ check "and the summary links Trivy's release notes"                 "yes"    "$(
 check "and no workflow file is touched"                             "yes"    "$([ "$wf_before" = "$(cat "${ROOT}"/.github/workflows/*.yml)" ] && echo yes || echo no)"
 teardown
 
+setup; printf 'gitleaks   = "8.30.1"\n' >>"${ROOT}/mise.toml"; latest gitleaks 8.31.0; run_refresh
+check "gitleaks is refreshed like the rest"                         "8.31.0" "$(pin gitleaks)"
+teardown
+
+setup; printf 'newtool    = "1.0.0"\n' >>"${ROOT}/mise.toml"; run_refresh
+check "a pin the refresh does not know fails the run"               "1"   "$?"
+check "naming the tool"                                             "yes" "$(grep -qF 'pins newtool' "$OUT" && echo yes || echo no)"
+teardown
+
 setup; : >"${WORK}/latest.txt"; latest terragrunt 1.1.4; latest tflint 0.64.0; run_refresh
 check "mise failing to resolve a tool is an error, not a skip"      "1"   "$?"
 teardown
