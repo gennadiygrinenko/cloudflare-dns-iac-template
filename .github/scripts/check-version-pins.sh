@@ -6,8 +6,7 @@
 # in four places by hand. The pins then moved to one action, and now to one
 # file that a laptop reads too. A second declaration anywhere would win for
 # whatever reads it and drift away silently, so reintroducing one is itself
-# the failure. Workflow-level *_VERSION pins that remain (Trivy, installed by
-# its own action) must still agree with each other.
+# the failure.
 #
 # Testing hook: PINS_ROOT=<dir> points at a repository root other than this one.
 set -euo pipefail
@@ -27,7 +26,7 @@ REQUIRED_TOOLS=(terraform terragrunt tflint)
 
 # Env keys that used to carry these pins. Any of them in a workflow is a second
 # source of truth.
-MISE_OWNED_KEYS=(TERRAFORM_VERSION TERRAGRUNT_VERSION TFLINT_VERSION PRE_COMMIT_VERSION SHELLCHECK_VERSION JQ_VERSION)
+MISE_OWNED_KEYS=(TERRAFORM_VERSION TERRAGRUNT_VERSION TFLINT_VERSION PRE_COMMIT_VERSION SHELLCHECK_VERSION JQ_VERSION TRIVY_VERSION)
 
 [ -f "$MISE" ] || error_exit 1 "mise.toml not found at ${ROOT} — tool versions have no home."
 
@@ -64,22 +63,8 @@ if [ -f "$SETUP_ACTION" ] && grep -qE '^    default: "v?[0-9]+\.[0-9]+' "$SETUP_
   failed=1
 fi
 
-# Whatever *_VERSION pins remain at workflow level must agree with each other.
-keys="$(grep -hoE '^  [A-Z][A-Z0-9_]*_VERSION:' "${WORKFLOWS}"/*.yml 2>/dev/null | tr -d ' :' | sort -u || true)"
-for key in $keys; do
-  values="$(grep -hE "^  ${key}:" "${WORKFLOWS}"/*.yml |
-    sed -E 's/^[^:]*:[[:space:]]*"?([^"]*)"?[[:space:]]*$/\1/' | sort -u)"
-  if [ "$(printf '%s\n' "$values" | wc -l | tr -d ' ')" -gt 1 ]; then
-    log_error "${key} disagrees between workflows:"
-    grep -nE "^  ${key}:" "${WORKFLOWS}"/*.yml | sed 's|.*/workflows/|    |' >&2
-    failed=1
-  else
-    log_info "${key} = ${values} (workflow env)"
-  fi
-done
-
 if [ "$failed" -ne 0 ]; then
   error_exit 1 "Tool versions are declared in more than one place, or mise.toml is incomplete."
 fi
 
-log_success "Tool versions are declared once, in mise.toml, and the remaining workflow pins agree."
+log_success "Tool versions are declared once, in mise.toml."

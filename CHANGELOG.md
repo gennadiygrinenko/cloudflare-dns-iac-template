@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- **Trivy is pinned in `mise.toml`, and the Tool versions refresh no longer edits workflows.** The October run failed at push: it had bumped `TRIVY_VERSION` in `security.yml`, and `GITHUB_TOKEN` may not create or update a workflow file. Every check before the push had passed. The Security workflow now installs Trivy from `mise.toml` and runs the CLI instead of `aquasecurity/trivy-action`; the pins check rejects `TRIVY_VERSION` in a workflow, and the refresh test fails if a refresh touches `.github/workflows/`
 - **The `Provider lock` pull request can now get the normal checks.** A pull request opened with `GITHUB_TOKEN` starts no workflows, so it carried no checks and, once `main` moved, could not be brought up to date by anyone but a human. With a `PROVIDER_LOCK_TOKEN` secret (a PAT with contents and pull-requests write) the branch is pushed and the pull request opened as that user, and the checks run. Without the secret nothing changes except a warning in the run and a line in the pull request body saying so
 
 ## [2.10.0] - 2026-09-05

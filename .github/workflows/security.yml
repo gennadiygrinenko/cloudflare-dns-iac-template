@@ -27,9 +27,6 @@ permissions:
   contents: read
   security-events: write
 
-env:
-  TRIVY_VERSION: "0.74.0"
-
 jobs:
   trivy-config:
     name: Trivy misconfiguration scan
@@ -38,18 +35,22 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Scan Terraform and workflows
-        uses: aquasecurity/trivy-action@v0.36.0
+      # Trivy alone, at the version mise.toml pins; the rest of the IaC
+      # tooling is not needed for a config scan.
+      - name: Install Trivy
+        uses: jdx/mise-action@v2
         with:
-          scan-type: config
-          scan-ref: .
-          version: v${{ env.TRIVY_VERSION }}
-          format: sarif
-          output: trivy.sarif
-          # Advisory: alerts are the output, not a failed job.
-          exit-code: "0"
-          # Terragrunt writes these during plan; they are not source.
-          skip-dirs: "**/.terragrunt-cache"
+          install_args: trivy
+          cache: true
+
+      # Advisory: alerts are the output, not a failed job (--exit-code 0).
+      # Terragrunt writes .terragrunt-cache during plan; it is not source.
+      - name: Scan Terraform and workflows
+        run: |
+          trivy config . \
+            --format sarif --output trivy.sarif \
+            --exit-code 0 \
+            --skip-dirs '**/.terragrunt-cache'
 
       - name: Upload results to code scanning
         uses: github/codeql-action/upload-sarif@v4
