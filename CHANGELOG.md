@@ -6,13 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.11.0] - 2026-10-03
+
+The October run of the version-keeping machinery failed where nothing had looked: the monthly tool refresh could not push the Trivy bump, its pull requests waited for a manual approval, and two pins had no updater at all. All four are closed, and the tools it was trying to move — Terraform back on 1.16 among them — are now on their newest releases.
+
+### Fixed
+
+- **Trivy is pinned in `mise.toml`, and the Tool versions refresh no longer edits workflows.** The October run failed at push: it had bumped `TRIVY_VERSION` in `security.yml`, and `GITHUB_TOKEN` may not create or update a workflow file. Every check before the push had passed. The Security workflow now installs Trivy from `mise.toml` and runs the CLI instead of `aquasecurity/trivy-action`; the pins check rejects `TRIVY_VERSION` in a workflow, and the refresh test fails if a refresh touches `.github/workflows/`
+- **`gitleaks` is refreshed by `Tool versions`**, and the refresh fails on any `mise.toml` pin it does not know. gitleaks was pinned without being added to the refresh list, so it never moved and nothing said so
+- **Dependabot watches the composite actions too.** With `directory: /` it read `.github/workflows` only, so `jdx/mise-action` in `setup-iac` stayed on v2 — the Node 20 deprecation warning on every run — with v5 out and nothing proposing it. `.github/actions/*` is now listed
+
 ### Changed
 
-- **Dependabot watches the composite actions too.** With `directory: /` it read `.github/workflows` only, so `jdx/mise-action` in `setup-iac` stayed on v2 — the Node 20 deprecation warning on every run — with v5 out and nothing proposing it. `.github/actions/*` is now listed
-- **`gitleaks` is refreshed by `Tool versions`**, and the refresh fails on any `mise.toml` pin it does not know. gitleaks was pinned without being added to the refresh list, so it never moved and nothing said so
 - **Tools moved to the newest releases** through the first `Tool versions` pull request: Terraform 1.15.9 → 1.16.5, Terragrunt 1.1.4 → 1.1.6, shellcheck 0.10.0 → 0.11.0, jq 1.8.1 → 1.8.2, Trivy 0.74.0 → 0.75.0. Terraform is back on 1.16: 1.16.1 fixed the dropped `import` blocks that kept the pin on 1.15.9 ([hashicorp/terraform#39068](https://github.com/hashicorp/terraform/issues/39068)), and `terraform-import-blocks.sh` passed against 1.16.5 in the refresh run
 - **The `Tool versions` pull request gets its checks without a manual approval.** Opened with `GITHUB_TOKEN`, its Validate run sat in `action_required` until a maintainer approved it, and the required `Validate complete` check blocked the merge. It now pushes and opens the pull request with `PROVIDER_LOCK_TOKEN` when that secret is set — the PAT the provider lock refresh already uses; no `workflows` scope is needed, since the refresh only edits `mise.toml`
-- **Trivy is pinned in `mise.toml`, and the Tool versions refresh no longer edits workflows.** The October run failed at push: it had bumped `TRIVY_VERSION` in `security.yml`, and `GITHUB_TOKEN` may not create or update a workflow file. Every check before the push had passed. The Security workflow now installs Trivy from `mise.toml` and runs the CLI instead of `aquasecurity/trivy-action`; the pins check rejects `TRIVY_VERSION` in a workflow, and the refresh test fails if a refresh touches `.github/workflows/`
 - **The `Provider lock` pull request can now get the normal checks.** A pull request opened with `GITHUB_TOKEN` starts no workflows, so it carried no checks and, once `main` moved, could not be brought up to date by anyone but a human. With a `PROVIDER_LOCK_TOKEN` secret (a PAT with contents and pull-requests write) the branch is pushed and the pull request opened as that user, and the checks run. Without the secret nothing changes except a warning in the run and a line in the pull request body saying so
 
 ## [2.10.0] - 2026-09-05
@@ -266,7 +273,8 @@ Configuration syntax is unchanged — existing `variables.auto.tfvars` files kee
 - Pre-commit hooks: `terraform_fmt`, `terraform_validate`, `terraform_tflint`, `terragrunt_fmt`, shellcheck
 - `CODEOWNERS` for required reviews on infrastructure changes
 
-[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.10.0...HEAD
+[Unreleased]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.11.0...HEAD
+[2.11.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.10.0...v2.11.0
 [2.10.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.9.0...v2.10.0
 [2.9.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.8.0...v2.9.0
 [2.8.0]: https://github.com/gennadiygrinenko/cloudflare-dns-iac-template/compare/v2.7.1...v2.8.0
