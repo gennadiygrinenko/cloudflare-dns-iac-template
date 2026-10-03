@@ -9,14 +9,14 @@
 # for_each resource and plans the rest as create, silently. Found on the first
 # real zone adoption; .github/scripts/tests/terraform-import-blocks.sh proves
 # it and gates every version the Tool versions workflow proposes.
-terraform  = "1.15.9"
-terragrunt = "1.1.4"
+terraform  = "1.16.5"
+terragrunt = "1.1.6"
 tflint     = "0.64.0"
 pre-commit = "4.6.2"
-shellcheck = "0.10.0"
-jq         = "1.8.1"
+shellcheck = "0.11.0"
+jq         = "1.8.2"
 gitleaks   = "8.30.1"
 # Only the Security workflow scans with it. Pinned here, not in that workflow,
 # because GITHUB_TOKEN may not push edits to .github/workflows/ — the Tool
 # versions refresh failed on exactly that while Trivy lived in a workflow env.
-trivy      = "0.74.0"
+trivy      = "0.75.0"
