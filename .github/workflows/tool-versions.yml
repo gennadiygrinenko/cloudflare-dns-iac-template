@@ -3,8 +3,7 @@ name: Tool versions
 # Move the pinned tool versions to the newest release each project has
 # published, and open a pull request when that changes anything.
 #
-# Dependabot cannot do this: these are plain env strings, not entries in any
-# manifest, so no ecosystem reaches them. The Version pins check keeps the
+# Dependabot cannot do this: no ecosystem reads mise.toml. The Version pins check keeps the
 # workflows agreeing with each other but has no idea a newer release exists —
 # which is how Terragrunt 1.1.4 went unnoticed for two weeks, and how Terraform
 # 1.16.0 was found only because somebody went and looked.
@@ -87,7 +86,7 @@ jobs:
           git -c user.name='github-actions[bot]' \
               -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
               checkout -B "$BRANCH"
-          git add mise.toml .github/workflows
+          git add mise.toml
           git -c user.name='github-actions[bot]' \
               -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
               commit -m "chore(ci): move tool version pins to the newest releases"
@@ -100,7 +99,7 @@ jobs:
           lease=$(git rev-parse --verify --quiet "refs/remotes/origin/$BRANCH" || true)
           git push --force-with-lease="$BRANCH:$lease" origin "$BRANCH"
 
-          body=$(printf '## Tool version refresh\n\n%s\nNo Dependabot ecosystem reads mise.toml or a workflow env string. The module tests and every zone were run against the new versions inside the workflow, since pull requests opened by Actions do not trigger checks.\n\nRead the linked release notes before merging — this workflow only reports that a newer version exists, it cannot tell whether the change is safe.\n' "$SUMMARY")
+          body=$(printf '## Tool version refresh\n\n%s\nNo Dependabot ecosystem reads mise.toml. The module tests and every zone were run against the new versions inside the workflow, since pull requests opened by Actions do not trigger checks.\n\nRead the linked release notes before merging — this workflow only reports that a newer version exists, it cannot tell whether the change is safe.\n' "$SUMMARY")
 
           # Ask whether the pull request exists rather than letting a failed
           # create fall through to edit, which reports a missing pull request

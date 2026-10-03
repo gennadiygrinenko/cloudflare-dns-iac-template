@@ -21,7 +21,7 @@ setup() {
   mkdir -p "${ROOT}/.github/workflows" "${ROOT}/.github/actions/setup-iac"
   mise_toml 'terraform  = "1.16.0"' 'terragrunt = "1.1.4"' 'tflint     = "0.64.0"' 'pre-commit = "4.6.2"'
   workflow validate.yml
-  workflow security.yml 'TRIVY_VERSION: "0.74.0"'
+  workflow security.yml
   action
 }
 teardown() { rm -rf "$WORK"; }
@@ -55,7 +55,6 @@ echo "check-version-pins.sh"
 setup; run_check
 check "a repository with every pin in mise.toml passes"            "0"   "$?"
 check "and lists the pins it found"                                 "yes" "$(output_has 'terraform = 1.16.0 (mise.toml)')"
-check "and the one workflow-level pin that remains"                 "yes" "$(output_has 'TRIVY_VERSION = 0.74.0')"
 teardown
 
 setup; rm "${ROOT}/mise.toml"; run_check
@@ -92,13 +91,9 @@ check "a version default on setup-iac fails"                        "1"   "$?"
 check "since the action must install from mise.toml"                "yes" "$(output_has 'declares a version default')"
 teardown
 
-setup; workflow other.yml 'TRIVY_VERSION: "0.75.0"'; run_check
-check "a remaining workflow pin that disagrees fails"               "1"   "$?"
-check "naming the key"                                              "yes" "$(output_has 'TRIVY_VERSION disagrees')"
-teardown
-
-setup; workflow security.yml; run_check
-check "no workflow-level pins at all is fine"                       "0"   "$?"
+setup; workflow security.yml 'TRIVY_VERSION: "0.74.0"'; run_check
+check "TRIVY_VERSION back in a workflow fails"                      "1"   "$?"
+check "since Trivy is pinned in mise.toml now"                      "yes" "$(output_has 'TRIVY_VERSION is pinned in a workflow')"
 teardown
 
 echo
