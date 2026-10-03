@@ -29,6 +29,7 @@ MISE_TOOLS=(
   "pre-commit:pre-commit/pre-commit"
   "shellcheck:koalaman/shellcheck"
   "jq:jqlang/jq"
+  "gitleaks:gitleaks/gitleaks"
   "trivy:aquasecurity/trivy"
 )
 
@@ -37,6 +38,13 @@ summary=""
 mise_pin() {
   sed -nE "s/^${1}[[:space:]]*=[[:space:]]*\"([^\"]*)\".*/\1/p" "$MISE" | head -1
 }
+
+# A tool pinned in mise.toml but missing above is never refreshed, and nothing
+# says so -- gitleaks sat that way from the day it was added.
+known=" ${MISE_TOOLS[*]%%:*} "
+while IFS= read -r tool; do
+  case "$known" in *" ${tool} "*) ;; *) error_exit 1 "mise.toml pins ${tool}, which refresh-tools.sh does not know; add it to MISE_TOOLS" ;; esac
+done < <(sed -nE 's/^([A-Za-z0-9_-]+)[[:space:]]*=.*/\1/p' "$MISE")
 
 for entry in "${MISE_TOOLS[@]}"; do
   tool="${entry%%:*}"; repo="${entry#*:}"

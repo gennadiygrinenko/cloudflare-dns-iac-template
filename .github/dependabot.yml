@@ -2,9 +2,14 @@ version: 2
 
 updates:
   # Action versions are pinned in the workflows; without this they rot silently
-  # until a runner drops the Node version they target.
+  # until a runner drops the Node version they target. "/" covers
+  # .github/workflows only; the composite actions need their own entry, or
+  # setup-iac's mise-action sits on a deprecated Node with nothing proposing
+  # a bump -- which it did, at v2 with v5 out.
   - package-ecosystem: github-actions
-    directory: /
+    directories:
+      - /
+      - /.github/actions/*
     schedule:
       interval: weekly
     commit-message:
