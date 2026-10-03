@@ -10,6 +10,8 @@
 # Outputs:
 #   /tmp/dmarc-checklist.md  - PR comment body (only when findings exist)
 #   has_findings             - "true" | "false" (via GITHUB_OUTPUT)
+#
+# Testing hook: DMARC_BODY=<file> writes the comment body there instead.
 
 set -euo pipefail
 
@@ -18,9 +20,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-BODY="/tmp/dmarc-checklist.md"
+BODY="${DMARC_BODY:-/tmp/dmarc-checklist.md}"
 ROWS="$(mktemp)"
 WARNINGS="$(mktemp)"
+UNCHECKED="$(mktemp)"
 
 for zone in $(echo "${ZONES:-[]}" | jq -r '.[]'); do
   zone_dir="${REPO_ROOT}/envs/cloudflare/zones/${zone}"
@@ -35,6 +38,9 @@ for zone in $(echo "${ZONES:-[]}" | jq -r '.[]'); do
   if ! (cd "$zone_dir" && terragrunt plan -out="$plan_file" --non-interactive) >"$plan_log" 2>&1 || [ ! -f "$plan_file" ]; then
     log_warning "Plan failed for ${zone} — skipping its checklist."
     tail -15 "$plan_log" >&2
+    # Skipped is not clean: without this a zone whose plan failed was reported
+    # as needing nothing, and a missing authorization drops reports silently.
+    echo "- \`${zone}\`" >>"$UNCHECKED"
     continue
   fi
 
@@ -55,7 +61,7 @@ for zone in $(echo "${ZONES:-[]}" | jq -r '.[]'); do
   ' <<<"$plan_json" >>"$WARNINGS"
 done
 
-if [ ! -s "$ROWS" ] && [ ! -s "$WARNINGS" ]; then
+if [ ! -s "$ROWS" ] && [ ! -s "$WARNINGS" ] && [ ! -s "$UNCHECKED" ]; then
   log_success "No external DMARC authorizations required."
   echo "has_findings=false" >>"$GITHUB_OUTPUT"
   exit 0
@@ -78,6 +84,14 @@ fi
     echo "An authorization record is planned in a managed child zone that its managed parent does not delegate to, so nothing would answer the query."
     echo
     cat "$WARNINGS"
+    echo
+  fi
+  if [ -s "$UNCHECKED" ]; then
+    echo "### Not checked"
+    echo
+    echo "The plan failed for these zones, so their DMARC authorizations are unknown — not absent. The Validate job for the zone has the error."
+    echo
+    cat "$UNCHECKED"
     echo
   fi
   echo "_Advisory only — this check never fails the PR._"

@@ -81,6 +81,10 @@ setup; printf 'gitleaks   = "8.30.1"\n' >>"${ROOT}/mise.toml"; latest gitleaks 8
 check "gitleaks is refreshed like the rest"                         "8.31.0" "$(pin gitleaks)"
 teardown
 
+setup; printf '\n[env]\nTG_TF_PATH = "terraform"\n' >>"${ROOT}/mise.toml"; run_refresh
+check "keys outside [tools] are not taken for pins"                 "0"   "$?"
+teardown
+
 setup; printf 'newtool    = "1.0.0"\n' >>"${ROOT}/mise.toml"; run_refresh
 check "a pin the refresh does not know fails the run"               "1"   "$?"
 check "naming the tool"                                             "yes" "$(grep -qF 'pins newtool' "$OUT" && echo yes || echo no)"

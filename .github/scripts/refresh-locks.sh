@@ -54,6 +54,13 @@ for dir in "${ZONES_DIR}"/*/; do
     terragrunt run -- providers lock "${PLATFORMS[@]}"
   )
 
+  # Without this, a missing lock made the count below empty, the integer test
+  # errored inside the `if` -- which set -e ignores -- and the check passed.
+  if [ ! -f "$lock" ]; then
+    log_error "${zone}: no lock file after providers lock"
+    exit 1
+  fi
+
   # A lock that covers only the platform that generated it is the failure this
   # step is here to prevent, and it looks exactly like success. Count instead.
   h1_count="$(grep -c '"h1:' "$lock" || true)"

@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Fixture suites for the last two scripts on the "exercised by hand" list: 21 cases for `refresh-locks.sh` (platform hash count, hash-only churn reverted, version moves, a zone with no lock yet, Terragrunt failing) and 21 for `dmarc-checklist.sh` (table rows, delegation warnings, skipped and failed zones). Both run in `Script logic`
+
+### Fixed
+
+- **A zone whose plan failed was reported as needing no DMARC authorization.** `dmarc-checklist.sh` skipped it with a warning in the log, and if nothing else turned up it wrote "No external DMARC authorizations required" and posted no comment. The comment now lists such zones under "Not checked"; the check stays advisory
+- **`refresh-locks.sh` passed its platform check when no lock was written.** The hash count came back empty, the integer test errored inside an `if` — which `set -e` ignores — and the run then died on an unrelated `sed` error. It now fails with a message that names the zone
+- **Terragrunt used OpenTofu on laptops that have it.** Terragrunt prefers `tofu` when both are on `PATH`, so a Homebrew OpenTofu silently replaced the pinned Terraform locally while CI, which has none, used Terraform. `mise.toml` now sets `TG_TF_PATH = "terraform"`, and the refresh's unknown-pin check reads only the `[tools]` section
+
 ## [2.11.0] - 2026-10-03
 
 The October run of the version-keeping machinery failed where nothing had looked: the monthly tool refresh could not push the Trivy bump, its pull requests waited for a manual approval, and two pins had no updater at all. All four are closed, and the tools it was trying to move — Terraform back on 1.16 among them — are now on their newest releases.
